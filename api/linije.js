@@ -76,7 +76,7 @@ export default function handler(req, res) {
 <body>
  
     <div class="controls">
-        <h3>GSP Live <span class="badge">Force-Refresh</span></h3>
+        <h3>Sva Vozila Prijavljena na Polazak</h3>
  
         <div class="input-group">
             <input type="number" id="lineInput" placeholder="Linija (npr. 31)" onkeypress="handleEnter(event)">
@@ -110,7 +110,7 @@ export default function handler(req, res) {
         let izabraneLinije = [];
         let timerId = null;
         let countdownId = null;
-        let refreshTime = 35; // 👈 PROMENJENA VREDNOST SA 15 NA 60 SEKUNDI
+        let refreshTime = 60; // 👈 PROMENJENA VREDNOST SA 15 NA 60 SEKUNDI
  
         let timeLeft = 0;
  
