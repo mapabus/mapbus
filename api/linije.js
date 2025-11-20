@@ -280,7 +280,7 @@ export default function handler(req, res) {
                         <div class="popup-row"><span class="popup-label">Garažni:</span> \${label}</div>
                         <hr style="margin: 5px 0; border-color:#eee;">
                         <div class="popup-row"><span class="popup-label">Polazak:</span> <b>\${startTime}</b></div>
-                        <div class="popup-row"><span class="popup-label">Smer ID:</span> <span style="color:\${color}; font-weight:bold;">\${destId}</span></div>
+                        <div class="popup-row"><span class="popup-label">Smer (ide ka):</span> <span style="color:\${color}; font-weight:bold;">\${destId}</span></div>
                         <div class="popup-row"><span class="popup-label">Ugao:</span> \${rotation.toFixed(1)}°</div>
                     </div>
                 \`;
