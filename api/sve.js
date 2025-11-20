@@ -116,7 +116,7 @@ export default function handler(req, res) {
                         sviPodaci = data.entity; // Čuvamo podatke globalno
                         popuniPadajuciMeni();    // Popunjavamo select listu
                         nacrtajMarkere('sve');   // Crtamo sve na početku
-                        document.getElementById('status').innerText = `Aktivnih vozila: ${sviPodaci.length}`;
+                        document.getElementById('status').innerText = \`Aktivnih vozila: \${sviPodaci.length}\`;
                     }
                 })
                 .catch(error => {
@@ -188,18 +188,18 @@ export default function handler(req, res) {
  
                     var customIcon = L.divIcon({
                         className: 'custom-div-icon',
-                        html: `<div class="bus-marker ${markerClass}" style="width: 30px; height: 30px;">${routeNum}</div>`,
+                        html: \`<div class="bus-marker \${markerClass}" style="width: 30px; height: 30px;">\${routeNum}</div>\`,
                         iconSize: [30, 30],
                         iconAnchor: [15, 15]
                     });
  
                     var marker = L.marker([lat, lon], {icon: customIcon});
  
-                    var popupSadrzaj = `
-                        <b>Linija:</b> ${routeNum}<br>
-                        <b>Vozilo:</b> ${info.vehicle.label}<br>
-                        <b>Polazak:</b> ${trip.startTime}
-                    `;
+                    var popupSadrzaj = \`
+                        <b>Linija:</b> \${routeNum}<br>
+                        <b>Vozilo:</b> \${info.vehicle.label}<br>
+                        <b>Polazak:</b> \${trip.startTime}
+                    \`;
                     marker.bindPopup(popupSadrzaj);
  
                     // Dodajemo marker u grupu (ne direktno na mapu)

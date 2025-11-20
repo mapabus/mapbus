@@ -142,8 +142,8 @@ export default function handler(req, res) {
             try {
                 const timestamp = Date.now();
                 const randomSalt = Math.random().toString(36).substring(2, 15);
-                const targetUrl = `${BASE_URL}?_=${timestamp}&salt=${randomSalt}`;
-                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+                const targetUrl = \`\${BASE_URL}?_=\${timestamp}&salt=\${randomSalt}\`;
+                const proxyUrl = \`https://corsproxy.io/?\${encodeURIComponent(targetUrl)}\`;
  
                 const response = await fetch(proxyUrl, { 
                     method: 'GET',
@@ -161,7 +161,7 @@ export default function handler(req, res) {
                 if (data && data.entity) {
                     crtajVozila(data.entity);
                     const timeStr = new Date().toLocaleTimeString();
-                    document.getElementById('statusText').innerHTML = `Ažurirano: <b>${timeStr}</b>`;
+                    document.getElementById('statusText').innerHTML = \`Ažurirano: <b>\${timeStr}</b>\`;
                     document.getElementById('statusText').style.color = "#27ae60";
                 }
             } catch (error) {
@@ -202,7 +202,7 @@ export default function handler(req, res) {
                 const lon = v.vehicle.position.longitude;
  
                 const destId = tripDestinations[tripId] || "Unknown";
-                const uniqueDirKey = `${route}_${destId}`;
+                const uniqueDirKey = \`\${route}_\${destId}\`;
  
                 if (!directionColorMap[uniqueDirKey]) {
                     const nextColorIndex = Object.keys(directionColorMap).length % colors.length;
@@ -222,13 +222,13 @@ export default function handler(req, res) {
                     if (distance > 0.00001) { 
                         rotation = calculateBearing(prev.lat, prev.lon, lat, lon);
                         hasAngle = true;
-                        console.log(`Vozilo ${route} (${id}) se pomerilo: ${distance.toFixed(6)}°, ugao: ${rotation.toFixed(1)}°`);
+                        console.log(\`Vozilo \${route} (\${id}) se pomerilo: \${distance.toFixed(6)}°, ugao: \${rotation.toFixed(1)}°\`);
                     } else {
                         rotation = prev.angle;
                         hasAngle = prev.hasAngle;
                     }
                 } else {
-                    console.log(`Vozilo ${route} (${id}) se pojavljuje prvi put na ${lat}, ${lon}`);
+                    console.log(\`Vozilo \${route} (\${id}) se pojavljuje prvi put na \${lat}, \${lon}\`);
                 }
  
                 vehicleHistory[id] = { 
@@ -240,16 +240,16 @@ export default function handler(req, res) {
  
                 const arrowDisplay = hasAngle ? 'block' : 'none';
  
-                const iconHtml = `
+                const iconHtml = \`
                     <div class="bus-wrapper">
-                        <div class="bus-arrow" style="transform: rotate(${rotation}deg); display: ${arrowDisplay};">
-                            <div class="arrow-head" style="border-bottom-color: ${color}; filter: brightness(0.6);"></div>
+                        <div class="bus-arrow" style="transform: rotate(\${rotation}deg); display: \${arrowDisplay};">
+                            <div class="arrow-head" style="border-bottom-color: \${color}; filter: brightness(0.6);"></div>
                         </div>
-                        <div class="bus-circle" style="background: ${color};">
-                            ${route}
+                        <div class="bus-circle" style="background: \${color};">
+                            \${route}
                         </div>
                     </div>
-                `;
+                \`;
  
                 const icon = L.divIcon({
                     className: 'bus-icon-container',
@@ -258,16 +258,16 @@ export default function handler(req, res) {
                     iconAnchor: [22, 22]
                 });
  
-                const popupContent = `
+                const popupContent = \`
                     <div class="popup-content">
-                        <div class="popup-row"><span class="popup-label">Linija:</span> <b>${route}</b></div>
-                        <div class="popup-row"><span class="popup-label">Garažni:</span> ${label}</div>
+                        <div class="popup-row"><span class="popup-label">Linija:</span> <b>\${route}</b></div>
+                        <div class="popup-row"><span class="popup-label">Garažni:</span> \${label}</div>
                         <hr style="margin: 5px 0; border-color:#eee;">
-                        <div class="popup-row"><span class="popup-label">Polazak:</span> <b>${startTime}</b></div>
-                        <div class="popup-row"><span class="popup-label">Smer ID:</span> <span style="color:${color}; font-weight:bold;">${destId}</span></div>
-                        <div class="popup-row"><span class="popup-label">Ugao:</span> ${rotation.toFixed(1)}°</div>
+                        <div class="popup-row"><span class="popup-label">Polazak:</span> <b>\${startTime}</b></div>
+                        <div class="popup-row"><span class="popup-label">Smer ID:</span> <span style="color:\${color}; font-weight:bold;">\${destId}</span></div>
+                        <div class="popup-row"><span class="popup-label">Ugao:</span> \${rotation.toFixed(1)}°</div>
                     </div>
-                `;
+                \`;
  
                 L.marker([lat, lon], {icon: icon})
                     .bindPopup(popupContent)
@@ -311,11 +311,11 @@ export default function handler(req, res) {
             const ul = document.getElementById('activeLines');
             ul.innerHTML = '';
             izabraneLinije.forEach((l) => {
-                ul.innerHTML += `
+                ul.innerHTML += \`
                     <li class="line-item">
-                        <span>Linija ${l}</span>
-                        <span class="remove-btn" onclick="ukloniLiniju('${l}')">&times;</span>
-                    </li>`;
+                        <span>Linija \${l}</span>
+                        <span class="remove-btn" onclick="ukloniLiniju('\${l}')">&times;</span>
+                    </li>\`;
             });
         }
  
