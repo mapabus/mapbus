@@ -165,6 +165,26 @@ export default function handler(req, res) {
             '#2980b9', '#8e44ad', '#27ae60', '#f39c12', '#16a085'
         ];
 
+        // ================= FUNKCIJA ZA NORMALIZACIJU ID-a =================
+        
+        function normalizeStopId(stopId) {
+            // stopId iz API-ja je u formatu 2XXXX (5 cifara)
+            // all.json ima id bez prve cifre i bez vodećih nula
+            // 21965 -> 1965
+            // 20934 -> 934
+            // 20998 -> 998
+            // 20001 -> 1
+            
+            if (typeof stopId === 'string' && stopId.length === 5 && stopId.startsWith('2')) {
+                // Ukloni prvu cifru '2'
+                let normalized = stopId.substring(1);
+                // Ukloni vodeće nule konvertovanjem u broj pa natrag u string
+                normalized = parseInt(normalized, 10).toString();
+                return normalized;
+            }
+            return stopId;
+        }
+
         // ================= UČITAVANJE STANICA =================
         
         async function loadStations() {
@@ -186,6 +206,7 @@ export default function handler(req, res) {
                 });
                 
                 console.log(\`✅ Mapa stanica ima \${Object.keys(stationsMap).length} unosa\`);
+                console.log("Primer ID-ova:", Object.keys(stationsMap).slice(0, 20));
             } catch (error) {
                 console.error("❌ Greška pri učitavanju stanica:", error);
             }
@@ -290,7 +311,7 @@ export default function handler(req, res) {
                 const tripId = v.vehicle.trip.tripId;
                 const destId = tripDestinations[tripId] || "Unknown";
                 
-                const normalizedId = destId.length === 5 ? destId.substring(1) : destId;
+                const normalizedId = normalizeStopId(destId);
                 const uniqueDirKey = \`\${route}_\${destId}\`;
                 
                 if (!directionColorMap[uniqueDirKey]) {
@@ -311,6 +332,8 @@ export default function handler(req, res) {
                 const info = destinationInfo[destId];
                 const station = stationsMap[info.normalizedId];
                 
+                console.log(\`Destinacija: API ID=\${destId}, Normalizovan=\${info.normalizedId}, Pronađeno=\${station ? station.name : 'NE'}\`);
+                
                 if (station && station.coords) {
                     const destHtml = \`
                         <div class="destination-marker" style="background: \${info.color};">
@@ -327,7 +350,7 @@ export default function handler(req, res) {
                     
                     const destPopup = \`
                         <div class="popup-content">
-                            <div class="popup-row"><span class="popup-label">Okretnica:</span> <b>\${station.name}</b></div>
+                            <div class="popup-row"><span class="popup-label">Stanica:</span> <b>\${station.name}</b></div>
                             <div class="popup-row"><span class="popup-label">ID:</span> \${destId}</div>
                         </div>
                     \`;
@@ -349,7 +372,7 @@ export default function handler(req, res) {
                 const lon = v.vehicle.position.longitude;
  
                 const destId = tripDestinations[tripId] || "Unknown";
-                const normalizedId = destId.length === 5 ? destId.substring(1) : destId;
+                const normalizedId = normalizeStopId(destId);
                 const station = stationsMap[normalizedId];
                 const destName = station ? station.name : destId;
                 
