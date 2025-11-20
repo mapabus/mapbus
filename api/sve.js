@@ -110,9 +110,10 @@ export default function handler(req, res) {
         
         const url = '/api/proxy';
         const REFRESH_INTERVAL = 60000; // 60 sekundi
+        const COUNTDOWN_START = 60; // Početak odbrojavanja
         var refreshTimer;
         var countdown;
-        var remainingSeconds = 60;
+        var remainingSeconds = COUNTDOWN_START;
  
         function ucitajAutobuse() {
             // Prikaži loading karticu
@@ -180,7 +181,12 @@ export default function handler(req, res) {
         }
         
         function startCountdown() {
-            remainingSeconds = 60;
+            // Očisti prethodni countdown ako postoji
+            if (countdown) {
+                clearInterval(countdown);
+            }
+            
+            remainingSeconds = COUNTDOWN_START;
             document.getElementById('timer').textContent = remainingSeconds;
             
             countdown = setInterval(function() {
