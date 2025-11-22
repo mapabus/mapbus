@@ -13,7 +13,7 @@ export default function handler(req, res) {
         body { margin: 0; padding: 0; font-family: sans-serif; overflow: hidden; background: #eee; }
         #map { height: 100vh; width: 100%; z-index: 1; }
  
-        /* KONTROLE */
+
         .controls {
             position: absolute; top: 10px; right: 10px; z-index: 1000;
             background: rgba(255, 255, 255, 0.98); padding: 15px;
@@ -39,7 +39,7 @@ export default function handler(req, res) {
  
         .status-bar { margin-top: 10px; font-size: 11px; color: #666; border-top: 1px solid #eee; padding-top: 8px; }
  
-        /* MARKERI */
+
         .bus-icon-container { background: none; border: none; }
         .bus-wrapper { position: relative; width: 50px; height: 56px; transition: all 0.3s ease; }
  
@@ -68,7 +68,7 @@ export default function handler(req, res) {
             z-index: 19;
         }
  
-        /* Strelica */
+
         .bus-arrow {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10;
             transition: transform 0.5s linear;
@@ -86,7 +86,7 @@ export default function handler(req, res) {
         .popup-row { display: flex; justify-content: space-between; margin-bottom: 4px; }
         .popup-label { font-weight: bold; color: #555; }
 
-        /* DESTINATION MARKER */
+
         .destination-marker {
             width: 24px;
             height: 24px;
@@ -132,7 +132,7 @@ export default function handler(req, res) {
  
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // ================= PODEŠAVANJA =================
+
         const map = L.map('map', { zoomControl: false }).setView([44.8125, 20.4612], 13);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; CARTO'
@@ -150,23 +150,23 @@ export default function handler(req, res) {
  
         let timeLeft = 0;
  
-        // Mapa boja za smerove
+
         let directionColorMap = {};
 
-        // Mapa stanica: id -> {name, coords}
+
         let stationsMap = {};
  
-        // Mapa naziva linija: routeId -> displayName
+
         let routeNamesMap = {};
  
-        // Paleta boja
+
         const colors = [
             '#e74c3c', '#3498db', '#9b59b6', '#2ecc71', '#f1c40f', 
             '#e67e22', '#1abc9c', '#34495e', '#d35400', '#c0392b',
             '#2980b9', '#8e44ad', '#27ae60', '#f39c12', '#16a085'
         ];
 
-        // ================= FUNKCIJA ZA NORMALIZACIJU =================
+
         
         function normalizeStopId(stopId) {
             if (typeof stopId === 'string' && stopId.length === 5 && stopId.startsWith('2')) {
@@ -189,24 +189,24 @@ export default function handler(req, res) {
             return routeNamesMap[normalizedId] || normalizedId;
         }
 
-        // ================= FUNKCIJA ZA PRONALAŽENJE ROUTE ID-a =================
+
         
         function findRouteId(userInput) {
             const normalized = userInput.trim().toUpperCase();
             
-            // Prvo proveri da li je direktan API ID
+
             if (routeNamesMap[normalized]) {
                 return normalized;
             }
             
-            // Traži u vrednostima (display names)
+
             for (const [apiId, displayName] of Object.entries(routeNamesMap)) {
                 if (displayName.toUpperCase() === normalized) {
                     return apiId;
                 }
             }
             
-            // Ako nije pronađeno, pokušaj sa normalizedRouteId (za slučaj da korisnik unese "031" umesto "31")
+
             const normalizedInput = normalizeRouteId(normalized);
             if (routeNamesMap[normalizedInput]) {
                 return normalizedInput;
@@ -215,7 +215,7 @@ export default function handler(req, res) {
             return null;
         }
 
-        // ================= UČITAVANJE STANICA (SA SERVERA!) =================
+
         
         async function loadStations() {
             try {
@@ -230,7 +230,7 @@ export default function handler(req, res) {
 
         loadStations();
 
-        // ================= UČITAVANJE NAZIVA LINIJA =================
+
         
         async function loadRouteNames() {
             try {
@@ -238,17 +238,17 @@ export default function handler(req, res) {
                 if (!response.ok) throw new Error("Greška pri učitavanju naziva linija");
                 const routeMapping = await response.json();
                 
-                console.log("✅ Učitano naziva linija:", Object.keys(routeMapping).length);
+                console.log("Učitano naziva linija:", Object.keys(routeMapping).length);
                 
                 routeNamesMap = routeMapping;
             } catch (error) {
-                console.error("❌ Greška pri učitavanju naziva linija:", error);
+                console.error("Greška pri učitavanju naziva linija:", error);
             }
         }
 
         loadRouteNames();
  
-        // ================= LOGIKA (SA SERVERSKIM API-jem!) =================
+
  
         async function osveziPodatke() {
             if (izabraneLinije.length === 0) {
@@ -262,7 +262,7 @@ export default function handler(req, res) {
             document.getElementById('statusText').style.color = "#e67e22";
  
             try {
-                // NOVA LOGIKA: Pozivamo naš server endpoint umesto eksternog API-ja!
+
                 const response = await fetch('/api/vehicles', { 
                     method: 'GET',
                     cache: 'no-store',
@@ -277,7 +277,7 @@ export default function handler(req, res) {
                 const data = await response.json();
  
                 if (data && data.vehicles) {
-                    // Kreiraj vehicleDestinations mapu
+
                     const vehicleDestinations = {};
                     data.tripUpdates.forEach(update => {
                         vehicleDestinations[update.vehicleId] = update.destination;
@@ -383,7 +383,7 @@ export default function handler(req, res) {
                 const uniqueDirKey = \`\${route}_\${destId}\`;
                 const color = directionColorMap[uniqueDirKey];
 
-                // Izračunaj ugao ka destinaciji
+ 
                 let rotation = 0;
                 let hasAngle = false;
 
@@ -437,7 +437,7 @@ export default function handler(req, res) {
             return brng;
         }
  
-        // ================= UI =================
+
  
         function dodajLiniju() {
             const input = document.getElementById('lineInput');
