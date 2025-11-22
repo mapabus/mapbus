@@ -116,7 +116,7 @@ export default function handler(req, res) {
         <h3>Sva Vozila Prijavljena na Polazak</h3>
  
         <div class="input-group">
-            <input type="number" id="lineInput" placeholder="Linija (npr. 31)" onkeypress="handleEnter(event)">
+            <input type="text" id="lineInput" placeholder="Linija (npr. 31, 860MV, 3A)" onkeypress="handleEnter(event)">
             <button id="addBtn" onclick="dodajLiniju()">+</button>
         </div>
  
@@ -189,6 +189,32 @@ export default function handler(req, res) {
         function getRouteDisplayName(routeId) {
             const normalizedId = normalizeRouteId(routeId);
             return routeNamesMap[normalizedId] || normalizedId;
+        }
+
+        // ================= FUNKCIJA ZA PRONALAŽENJE ROUTE ID-a =================
+        
+        function findRouteId(userInput) {
+            const normalized = userInput.trim().toUpperCase();
+            
+            // Prvo proveri da li je direktan API ID
+            if (routeNamesMap[normalized]) {
+                return normalized;
+            }
+            
+            // Traži u vrednostima (display names)
+            for (const [apiId, displayName] of Object.entries(routeNamesMap)) {
+                if (displayName.toUpperCase() === normalized) {
+                    return apiId;
+                }
+            }
+            
+            // Ako nije pronađeno, pokušaj sa normalizedRouteId (za slučaj da korisnik unese "031" umesto "31")
+            const normalizedInput = normalizeRouteId(normalized);
+            if (routeNamesMap[normalizedInput]) {
+                return normalizedInput;
+            }
+            
+            return null;
         }
 
         // ================= UČITAVANJE STANICA =================
@@ -310,11 +336,6 @@ export default function handler(req, res) {
                     if (updates.length > 0 && vehicleId) {
                         const lastStopId = updates[updates.length - 1].stopId;
                         vehicleDestinations[vehicleId] = lastStopId;
-                        
-                        // DEBUG
-                        if (vehicleId === 'P70618') {
-                            console.log(\`✅ P70618 destinacija iz tripUpdate: \${lastStopId}\`);
-                        }
                     }
                 }
             });
@@ -469,16 +490,32 @@ export default function handler(req, res) {
         function dodajLiniju() {
             const input = document.getElementById('lineInput');
             const val = input.value.trim();
- 
+
             if (!val) return;
-            if (izabraneLinije.length >= 5) { alert("Maksimalno 5 linija!"); return; }
-            if (izabraneLinije.includes(val)) { input.value = ''; return; }
- 
-            izabraneLinije.push(val);
+            if (izabraneLinije.length >= 5) { 
+                alert("Maksimalno 5 linija!"); 
+                return; 
+            }
+            
+            // Pronađi API ID koristeći novu funkciju
+            const routeId = findRouteId(val);
+            if (!routeId) {
+                alert(\`Linija "\${val}" nije pronađena! Pokušaj sa drugim nazivom.\`);
+                input.value = '';
+                return;
+            }
+            
+            if (izabraneLinije.includes(routeId)) { 
+                alert("Linija je već dodata!");
+                input.value = ''; 
+                return; 
+            }
+
+            izabraneLinije.push(routeId);
             azurirajListu();
             input.value = '';
             input.focus();
- 
+
             osveziPodatke();
         }
  
