@@ -1,7 +1,15 @@
 export default function handler(req, res) {
-
-    // 1. CSS STILOVI (Izdvojeni radi preglednosti i sigurnosti)
-    const styles = `
+  const html = `
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Linije</title>
+ 
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+ 
+    <style>
         body { margin: 0; padding: 0; font-family: sans-serif; overflow: hidden; background: #eee; }
         #map { height: 100vh; width: 100%; z-index: 1; }
  
@@ -94,10 +102,32 @@ export default function handler(req, res) {
             font-weight: bold;
             font-size: 16px;
         }
-    `;
+ 
+    </style>
+</head>
+<body>
+ 
+    <div class="controls">
+        <h3>Sva Vozila Prijavljena na Polazak</h3>
+ 
+        <div class="input-group">
+            <input type="text" id="lineInput" placeholder="Linija (npr. 31, 860MV, 3A)" onkeypress="handleEnter(event)">
+            <button id="addBtn" onclick="dodajLiniju()">+</button>
+        </div>
+ 
+        <ul id="activeLines"></ul>
+ 
+        <div class="status-bar">
+            Osvežavanje za: <b><span id="countdown">--</span>s</b><br>
+            <span id="statusText">Unesi liniju...</span>
+        </div>
+    </div>
+ 
+    <div id="map"></div>
+ 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
 
-    // 2. KLIJENTSKA SKRIPTA (Kao raw string, izbegavamo backticks unutar backticka)
-    const clientScript = `
         const map = L.map('map', { zoomControl: false }).setView([44.8125, 20.4612], 13);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; CARTO'
@@ -105,8 +135,6 @@ export default function handler(req, res) {
  
         L.control.zoom({ position: 'bottomright' }).addTo(map);
  
-        const shapesLayer = L.layerGroup().addTo(map);
-        const stopsLayer = L.layerGroup().addTo(map);
         const busLayer = L.layerGroup().addTo(map);
         const destinationLayer = L.layerGroup().addTo(map);
  
@@ -116,15 +144,12 @@ export default function handler(req, res) {
         let refreshTime = 60;
         let timeLeft = 0;
         let directionColorMap = {};
+        let stationsMap = {};
         let routeNamesMap = {};
         
+        // NOVI KOD - Shapes podaci i istorija vozila
         let shapesData = {};
         let shapesGradskeData = {};
-        let tripsData = [];
-        let tripsGradskeData = [];
-        let stopsData = {};
-        let stopsGradskeData = {};
-
         let vehicleHistory = {};
         let routeMappingData = {};
  
@@ -134,23 +159,8 @@ export default function handler(req, res) {
             '#2980b9', '#8e44ad', '#27ae60', '#f39c12', '#16a085'
         ];
 
-        function parseCSV(text) {
-            const lines = text.split('\\n');
-            const headers = lines[0].split(',').map(h => h.trim());
-            const result = [];
-            for(let i=1; i<lines.length; i++){
-                const line = lines[i].trim();
-                if(!line) continue;
-                const values = line.split(',');
-                const obj = {};
-                headers.forEach((h, index) => {
-                    obj[h] = values[index] ? values[index].trim() : '';
-                });
-                result.push(obj);
-            }
-            return result;
-        }
-
+        // ========== SHAPES UTILITY FUNKCIJE ==========
+        
         function parseShapesFile(text) {
             const lines = text.split('\\n');
             const shapes = {};
@@ -183,58 +193,19 @@ export default function handler(req, res) {
             return shapes;
         }
 
-        function parseStopsFile(text) {
-            const lines = text.split('\\n');
-            const stops = {};
-            const headers = lines[0].split(',').map(h => h.trim());
-            
-            const idIdx = headers.indexOf('stop_id');
-            const nameIdx = headers.indexOf('stop_name');
-            const latIdx = headers.indexOf('stop_lat');
-            const lonIdx = headers.indexOf('stop_lon');
-
-            if(idIdx === -1 || latIdx === -1 || lonIdx === -1) return stops;
-
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
-                const parts = line.split(','); 
-                
-                const id = parts[idIdx];
-                const lat = parseFloat(parts[latIdx]);
-                const lon = parseFloat(parts[lonIdx]);
-                const name = parts[nameIdx] || "Stanica";
-
-                if (id && !isNaN(lat) && !isNaN(lon)) {
-                    stops[id] = { lat, lon, name };
-                }
-            }
-            return stops;
-        }
-
-        async function loadStaticData() {
+        async function loadShapes() {
             try {
-                const shapesRes = await fetch('/api/shapes.txt');
-                shapesData = parseShapesFile(await shapesRes.text());
+                const shapesResponse = await fetch('/api/shapes.txt');
+                const shapesText = await shapesResponse.text();
+                shapesData = parseShapesFile(shapesText);
                 
-                const shapesGradskeRes = await fetch('/api/shapes_gradske.txt');
-                shapesGradskeData = parseShapesFile(await shapesGradskeRes.text());
-
-                const tripsRes = await fetch('/api/trips.txt');
-                tripsData = parseCSV(await tripsRes.text());
-
-                const tripsGradskeRes = await fetch('/api/trips_gradske.txt');
-                tripsGradskeData = parseCSV(await tripsGradskeRes.text());
-
-                const stopsRes = await fetch('/api/stops.txt');
-                stopsData = parseStopsFile(await stopsRes.text());
-
-                const stopsGradskeRes = await fetch('/api/stops_gradske.txt');
-                stopsGradskeData = parseStopsFile(await stopsGradskeRes.text());
+                const shapesGradskeResponse = await fetch('/api/shapes_gradske.txt');
+                const shapesGradskeText = await shapesGradskeResponse.text();
+                shapesGradskeData = parseShapesFile(shapesGradskeText);
                 
-                console.log('✅ Podaci učitani');
+                console.log('✅ Shapes učitani:', Object.keys(shapesData).length, '+', Object.keys(shapesGradskeData).length);
             } catch (error) {
-                console.error('❌ Greška pri učitavanju fajlova:', error);
+                console.error('❌ Greška pri učitavanju shapes:', error);
             }
         }
 
@@ -251,31 +222,6 @@ export default function handler(req, res) {
             return R * c;
         }
 
-        function distanceFromPointToLine(pt, linePoints) {
-            let minC = Infinity;
-            for(let i=0; i<linePoints.length-1; i++) {
-                const p1 = linePoints[i];
-                const p2 = linePoints[i+1];
-                const d = distanceFromPointToSegment(pt, p1, p2);
-                if(d < minC) minC = d;
-            }
-            return minC;
-        }
-
-        function distanceFromPointToSegment(p, v, w) {
-            function sqr(x) { return x * x }
-            function dist2(v, w) { return sqr(v.lat - w.lat) + sqr(v.lon - w.lon) }
-            function distToSegmentSquared(p, v, w) {
-                var l2 = dist2(v, w);
-                if (l2 == 0) return dist2(p, v);
-                var t = ((p.lat - v.lat) * (w.lat - v.lat) + (p.lon - v.lon) * (w.lon - v.lon)) / l2;
-                t = Math.max(0, Math.min(1, t));
-                return dist2(p, { lat: v.lat + t * (w.lat - v.lat),
-                                  lon: v.lon + t * (w.lon - v.lon) });
-            }
-            return Math.sqrt(distToSegmentSquared(p, v, w)) * 111139; 
-        }
-
         function findNearestPointOnShape(lat, lon, shape) {
             let minDistance = Infinity;
             let nearestIndex = 0;
@@ -287,11 +233,14 @@ export default function handler(req, res) {
                     nearestIndex = i;
                 }
             }
+            
             return nearestIndex;
         }
 
         function calculateRouteDistance(pos1, pos2, shape) {
-            if (!shape || shape.length === 0) return haversineDistance(pos1.lat, pos1.lon, pos2.lat, pos2.lon);
+            if (!shape || shape.length === 0) {
+                return haversineDistance(pos1.lat, pos1.lon, pos2.lat, pos2.lon);
+            }
             
             const idx1 = findNearestPointOnShape(pos1.lat, pos1.lon, shape);
             const idx2 = findNearestPointOnShape(pos2.lat, pos2.lon, shape);
@@ -299,27 +248,46 @@ export default function handler(req, res) {
             if (idx2 < idx1) {
                 let distance = 0;
                 for (let i = idx1; i < shape.length - 1; i++) {
-                    distance += haversineDistance(shape[i].lat, shape[i].lon, shape[i + 1].lat, shape[i + 1].lon);
+                    distance += haversineDistance(
+                        shape[i].lat, shape[i].lon,
+                        shape[i + 1].lat, shape[i + 1].lon
+                    );
                 }
                 for (let i = 0; i < idx2; i++) {
-                    distance += haversineDistance(shape[i].lat, shape[i].lon, shape[i + 1].lat, shape[i + 1].lon);
+                    distance += haversineDistance(
+                        shape[i].lat, shape[i].lon,
+                        shape[i + 1].lat, shape[i + 1].lon
+                    );
                 }
                 return distance;
             }
             
             let distance = 0;
             for (let i = idx1; i < idx2; i++) {
-                distance += haversineDistance(shape[i].lat, shape[i].lon, shape[i + 1].lat, shape[i + 1].lon);
+                distance += haversineDistance(
+                    shape[i].lat, shape[i].lon,
+                    shape[i + 1].lat, shape[i + 1].lon
+                );
             }
+            
             return distance;
         }
 
         function getShapeForLine(lineNumber) {
-            const trips = getTripsForRoute(lineNumber);
-            if(!trips || trips.length === 0) return null;
-            const shapeId = trips[0].shape_id;
-            if(shapesGradskeData[shapeId]) return shapesGradskeData[shapeId];
-            if(shapesData[shapeId]) return shapesData[shapeId];
+            const mappingKey = Object.keys(routeMappingData).find(key => {
+                const leftNumber = key.split(':')[0].trim();
+                return leftNumber === lineNumber.toString();
+            });
+            
+            if (!mappingKey) {
+                return null;
+            }
+            
+            const shapeId = routeMappingData[mappingKey];
+            
+            if (shapesData[shapeId]) return shapesData[shapeId];
+            if (shapesGradskeData[shapeId]) return shapesGradskeData[shapeId];
+            
             return null;
         }
 
@@ -339,7 +307,9 @@ export default function handler(req, res) {
             const prevData = vehicleHistory[vehicleId];
             const timeDiff = (now - prevData.timestamp) / 1000;
             
-            if (timeDiff < 1) return prevData.speed;
+            if (timeDiff < 1) {
+                return prevData.speed;
+            }
             
             if (timeDiff > 300) {
                 vehicleHistory[vehicleId] = {
@@ -357,7 +327,10 @@ export default function handler(req, res) {
             if (shape && shape.length > 0) {
                 distance = calculateRouteDistance(prevData.position, currentPosition, shape);
             } else {
-                distance = haversineDistance(prevData.position.lat, prevData.position.lon, currentPosition.lat, currentPosition.lon);
+                distance = haversineDistance(
+                    prevData.position.lat, prevData.position.lon,
+                    currentPosition.lat, currentPosition.lon
+                );
             }
             
             if (distance > 5000) {
@@ -383,6 +356,8 @@ export default function handler(req, res) {
             return speedKmh;
         }
 
+        // ========== ORIGINALNE FUNKCIJE ==========
+        
         function normalizeStopId(stopId) {
             if (typeof stopId === 'string' && stopId.length === 5 && stopId.startsWith('2')) {
                 let normalized = stopId.substring(1);
@@ -407,122 +382,48 @@ export default function handler(req, res) {
         function findRouteId(userInput) {
             const normalized = userInput.trim().toUpperCase();
             
-            if (routeNamesMap[normalized]) return normalized;
+            if (routeNamesMap[normalized]) {
+                return normalized;
+            }
             
             for (const [apiId, displayName] of Object.entries(routeNamesMap)) {
-                if (displayName.toUpperCase() === normalized) return apiId;
+                if (displayName.toUpperCase() === normalized) {
+                    return apiId;
+                }
             }
             
             const normalizedInput = normalizeRouteId(normalized);
-            if (routeNamesMap[normalizedInput]) return normalizedInput;
+            if (routeNamesMap[normalizedInput]) {
+                return normalizedInput;
+            }
             
             return null;
         }
-
+        
+        async function loadStations() {
+            try {
+                const response = await fetch('/api/stations');
+                if (!response.ok) throw new Error("Greška pri učitavanju stanica");
+                stationsMap = await response.json();
+                console.log(\`✅ Učitano stanica: \${Object.keys(stationsMap).length}\`);
+            } catch (error) {
+                console.error("❌ Greška pri učitavanju stanica:", error);
+            }
+        }
+        
         async function loadRouteNames() {
             try {
                 const response = await fetch('/route-mapping.json');
                 if (!response.ok) throw new Error("Greška pri učitavanju naziva linija");
                 routeMappingData = await response.json();
                 routeNamesMap = routeMappingData;
+                
+                console.log("✅ Učitano naziva linija:", Object.keys(routeNamesMap).length);
             } catch (error) {
                 console.error("❌ Greška pri učitavanju naziva linija:", error);
             }
         }
-
-        function getTripsForRoute(routeId) {
-            const normalizedRoute = normalizeRouteId(routeId);
-            
-            let relevantTrips = tripsGradskeData.filter(t => normalizeRouteId(t.route_id) === normalizedRoute);
-            if (relevantTrips.length === 0) {
-                relevantTrips = tripsData.filter(t => normalizeRouteId(t.route_id) === normalizedRoute);
-            }
-            return relevantTrips;
-        }
-
-        function drawRouteForLine(routeId) {
-            const trips = getTripsForRoute(routeId);
-            if(trips.length === 0) return;
-
-            const uniqueShapes = {};
-            trips.forEach(t => {
-                if(t.shape_id && !uniqueShapes[t.shape_id]) {
-                    uniqueShapes[t.shape_id] = {
-                        direction: t.direction_id || '0',
-                        headsign: t.trip_headsign || ''
-                    };
-                }
-            });
-
-            const shapesToDraw = Object.keys(uniqueShapes);
-            
-            let colorIdx = Object.keys(directionColorMap).length;
-
-            shapesToDraw.forEach((shapeId, idx) => {
-                let coordinates = [];
-                let isGradska = false;
-
-                if (shapesGradskeData[shapeId]) {
-                    coordinates = shapesGradskeData[shapeId];
-                    isGradska = true;
-                } else if (shapesData[shapeId]) {
-                    coordinates = shapesData[shapeId];
-                } else {
-                    return;
-                }
-
-                const info = uniqueShapes[shapeId];
-                const key = routeId + '_' + info.direction;
-                
-                let color;
-                if(directionColorMap[key]) {
-                    color = directionColorMap[key];
-                } else {
-                    color = colors[colorIdx % colors.length];
-                    directionColorMap[key] = color;
-                    colorIdx++;
-                }
-
-                const latlngs = coordinates.map(pt => [pt.lat, pt.lon]);
-                
-                L.polyline(latlngs, {
-                    color: color,
-                    weight: 4,
-                    opacity: 0.8
-                }).addTo(shapesLayer);
-
-                drawStopsOnShape(coordinates, color, info.direction, isGradska);
-            });
-        }
-
-        function drawStopsOnShape(shapePoints, color, direction, isGradska) {
-            const stopsSource = isGradska ? stopsGradskeData : stopsData;
-            const stops = Object.values(stopsSource);
-
-            stops.forEach(stop => {
-                const dist = distanceFromPointToLine({lat: stop.lat, lon: stop.lon}, shapePoints);
-                if(dist < 50) { 
-                    const stopMarker = L.circleMarker([stop.lat, stop.lon], {
-                        radius: 4,
-                        fillColor: color,
-                        color: "#fff",
-                        weight: 1,
-                        opacity: 1,
-                        fillOpacity: 1
-                    });
-                    
-                    const popupContent = 
-                        '<div class="popup-content">' +
-                            '<div class="popup-row"><b>' + stop.name + '</b></div>' +
-                            '<div class="popup-row">Smer: <span style="color:' + color + '; font-weight:bold;">' + (direction === '0' ? 'A' : 'B') + '</span></div>' +
-                        '</div>';
-                    
-                    stopMarker.bindPopup(popupContent);
-                    stopMarker.addTo(stopsLayer);
-                }
-            });
-        }
-
+ 
         async function osveziPodatke() {
             if (izabraneLinije.length === 0) {
                 busLayer.clearLayers();
@@ -556,7 +457,7 @@ export default function handler(req, res) {
                     
                     crtajVozila(data.vehicles, vehicleDestinations);
                     const timeStr = new Date().toLocaleTimeString();
-                    document.getElementById('statusText').innerHTML = 'Ažurirano: <b>' + timeStr + '</b>';
+                    document.getElementById('statusText').innerHTML = \`Ažurirano: <b>\${timeStr}</b>\`;
                     document.getElementById('statusText').style.color = "#27ae60";
                 }
             } catch (error) {
@@ -586,20 +487,16 @@ export default function handler(req, res) {
                 
                 const destId = vehicleDestinations[vehicleId] || "Unknown";
                 const normalizedId = normalizeStopId(destId);
+                const uniqueDirKey = \`\${route}_\${destId}\`;
                 
-                const directionGuess = v.directionId ? v.directionId.toString() : '0';
-                const key = route + '_' + directionGuess;
-
-                let color = directionColorMap[key];
-                if (!color) {
+                if (!directionColorMap[uniqueDirKey]) {
                     const nextColorIndex = Object.keys(directionColorMap).length % colors.length;
-                    color = colors[nextColorIndex];
-                    directionColorMap[key] = color;
+                    directionColorMap[uniqueDirKey] = colors[nextColorIndex];
                 }
                 
                 destinations.add(destId);
                 destinationInfo[destId] = {
-                    color: color,
+                    color: directionColorMap[uniqueDirKey],
                     normalizedId: normalizedId,
                     route: route
                 };
@@ -607,13 +504,14 @@ export default function handler(req, res) {
 
             destinations.forEach(destId => {
                 const info = destinationInfo[destId];
-                let station = stopsGradskeData[info.normalizedId] || stopsData[info.normalizedId];
+                const station = stationsMap[info.normalizedId];
                 
-                if (station) {
-                    const destHtml = 
-                        '<div class="destination-marker" style="background: ' + info.color + ';">' +
-                            '<div class="destination-marker-inner">📍</div>' +
-                        '</div>';
+                if (station && station.coords) {
+                    const destHtml = \`
+                        <div class="destination-marker" style="background: \${info.color};">
+                            <div class="destination-marker-inner">📍</div>
+                        </div>
+                    \`;
                     
                     const destIcon = L.divIcon({
                         className: 'destination-icon-container',
@@ -622,13 +520,14 @@ export default function handler(req, res) {
                         iconAnchor: [12, 24]
                     });
                     
-                    const destPopup = 
-                        '<div class="popup-content">' +
-                            '<div class="popup-row"><span class="popup-label">Stanica:</span> <b>' + station.name + '</b></div>' +
-                            '<div class="popup-row"><span class="popup-label">ID:</span> ' + destId + '</div>' +
-                        '</div>';
+                    const destPopup = \`
+                        <div class="popup-content">
+                            <div class="popup-row"><span class="popup-label">Stanica:</span> <b>\${station.name}</b></div>
+                            <div class="popup-row"><span class="popup-label">ID:</span> \${destId}</div>
+                        </div>
+                    \`;
                     
-                    L.marker([station.lat, station.lon], {icon: destIcon})
+                    L.marker(station.coords, {icon: destIcon})
                         .bindPopup(destPopup)
                         .addTo(destinationLayer);
                 }
@@ -645,35 +544,36 @@ export default function handler(req, res) {
  
                 const destId = vehicleDestinations[id] || "Unknown";
                 const normalizedId = normalizeStopId(destId);
-                let station = stopsGradskeData[normalizedId] || stopsData[normalizedId];
+                const station = stationsMap[normalizedId];
                 const destName = station ? station.name : destId;
                 
-                const directionGuess = v.directionId ? v.directionId.toString() : '0';
-                const key = route + '_' + directionGuess;
-                const color = directionColorMap[key] || '#333';
+                const uniqueDirKey = \`\${route}_\${destId}\`;
+                const color = directionColorMap[uniqueDirKey];
 
+                // IZRAČUNAJ BRZINU
                 const speed = calculateVehicleSpeed(id, { lat, lon }, route);
  
                 let rotation = 0;
                 let hasAngle = false;
 
-                if (station) {
-                    rotation = calculateBearing(lat, lon, station.lat, station.lon);
+                if (station && station.coords) {
+                    rotation = calculateBearing(lat, lon, station.coords[0], station.coords[1]);
                     hasAngle = true;
                 }
  
                 const arrowDisplay = hasAngle ? 'block' : 'none';
  
-                const iconHtml = 
-                    '<div class="bus-wrapper">' +
-                        '<div class="bus-arrow" style="transform: rotate(' + rotation + 'deg); display: ' + arrowDisplay + ';">' +
-                            '<div class="arrow-head" style="border-bottom-color: ' + color + '; filter: brightness(0.6);"></div>' +
-                        '</div>' +
-                        '<div class="bus-circle" style="background: ' + color + ';">' +
-                             routeDisplayName +
-                        '</div>' +
-                        '<div class="bus-garage-label">' + label + '</div>' +
-                    '</div>';
+                const iconHtml = \`
+                    <div class="bus-wrapper">
+                        <div class="bus-arrow" style="transform: rotate(\${rotation}deg); display: \${arrowDisplay};">
+                            <div class="arrow-head" style="border-bottom-color: \${color}; filter: brightness(0.6);"></div>
+                        </div>
+                        <div class="bus-circle" style="background: \${color};">
+                            \${routeDisplayName}
+                        </div>
+                        <div class="bus-garage-label">\${label}</div>
+                    </div>
+                \`;
  
                 const icon = L.divIcon({
                     className: 'bus-icon-container',
@@ -682,22 +582,24 @@ export default function handler(req, res) {
                     iconAnchor: [25, 28]
                 });
 
+                // DODAJ BRZINU U POPUP
                 let speedText = '';
                 if (speed !== null && speed !== undefined && speed > 0) {
-                    speedText = '<div class="popup-row"><span class="popup-label">Prosečna brzina:</span> <b style="color: #2980b9;">' + speed + ' km/h</b></div>';
+                    speedText = \`<div class="popup-row"><span class="popup-label">Prosečna brzina:</span> <b style="color: #2980b9;">\${speed} km/h</b></div>\`;
                 } else {
-                    speedText = '<div class="popup-row"><span class="popup-label">Brzina:</span> <span style="color: #95a5a6;">Računanje...</span></div>';
+                    speedText = \`<div class="popup-row"><span class="popup-label">Brzina:</span> <span style="color: #95a5a6;">Računanje...</span></div>\`;
                 }
  
-                const popupContent = 
-                    '<div class="popup-content">' +
-                        '<div class="popup-row"><span class="popup-label">Linija:</span> <b>' + routeDisplayName + '</b></div>' +
-                        '<div class="popup-row"><span class="popup-label">Garažni:</span> ' + label + '</div>' +
-                        '<hr style="margin: 5px 0; border-color:#eee;">' +
-                        '<div class="popup-row"><span class="popup-label">Polazak:</span> <b>' + startTime + '</b></div>' +
-                        '<div class="popup-row"><span class="popup-label">Smer (ide ka):</span> <span style="color:' + color + '; font-weight:bold;">' + destName + '</span></div>' +
-                         speedText +
-                    '</div>';
+                const popupContent = \`
+                    <div class="popup-content">
+                        <div class="popup-row"><span class="popup-label">Linija:</span> <b>\${routeDisplayName}</b></div>
+                        <div class="popup-row"><span class="popup-label">Garažni:</span> \${label}</div>
+                        <hr style="margin: 5px 0; border-color:#eee;">
+                        <div class="popup-row"><span class="popup-label">Polazak:</span> <b>\${startTime}</b></div>
+                        <div class="popup-row"><span class="popup-label">Smer (ide ka):</span> <span style="color:\${color}; font-weight:bold;">\${destName}</span></div>
+                        \${speedText}
+                    </div>
+                \`;
  
                 L.marker([lat, lon], {icon: icon})
                     .bindPopup(popupContent)
@@ -725,7 +627,7 @@ export default function handler(req, res) {
             
             const routeId = findRouteId(val);
             if (!routeId) {
-                alert('Linija "' + val + '" nije pronađena! Pokušaj sa drugim nazivom.');
+                alert(\`Linija "\${val}" nije pronađena! Pokušaj sa drugim nazivom.\`);
                 input.value = '';
                 return;
             }
@@ -737,7 +639,6 @@ export default function handler(req, res) {
             }
 
             izabraneLinije.push(routeId);
-            drawRouteForLine(routeId);
             azurirajListu();
             input.value = '';
             input.focus();
@@ -747,15 +648,6 @@ export default function handler(req, res) {
  
         function ukloniLiniju(linija) {
             izabraneLinije = izabraneLinije.filter(l => l !== linija);
-            shapesLayer.clearLayers();
-            stopsLayer.clearLayers();
-            
-            directionColorMap = {};
-            
-            izabraneLinije.forEach(l => {
-                drawRouteForLine(l);
-            });
-
             azurirajListu();
             osveziPodatke();
         }
@@ -765,11 +657,11 @@ export default function handler(req, res) {
             ul.innerHTML = '';
             izabraneLinije.forEach((l) => {
                 const displayName = getRouteDisplayName(l);
-                const li = document.createElement('li');
-                li.className = 'line-item';
-                li.innerHTML = '<span>Linija ' + displayName + '</span>' +
-                               '<span class="remove-btn" onclick="ukloniLiniju(\\'' + l + '\\')">&times;</span>';
-                ul.appendChild(li);
+                ul.innerHTML += \`
+                    <li class="line-item">
+                        <span>Linija \${displayName}</span>
+                        <span class="remove-btn" onclick="ukloniLiniju('\${l}')">&times;</span>
+                    </li>\`;
             });
         }
  
@@ -792,46 +684,21 @@ export default function handler(req, res) {
  
         function handleEnter(e) { if (e.key === 'Enter') dodajLiniju(); }
 
+        // INICIJALIZACIJA
         async function init() {
+            await loadStations();
             await loadRouteNames();
-            await loadStaticData();
+            await loadShapes();
             console.log('✅ Aplikacija inicijalizovana');
         }
 
         init();
-    `;
-
-    // 3. SPAJANJE SVEGA U JEDAN HTML ODGOVOR
-    const html = `
-<!DOCTYPE html>
-<html lang="sr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Linije</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>${styles}</style>
-</head>
-<body>
-    <div class="controls">
-        <h3>Sva Vozila Prijavljena na Polazak</h3>
-        <div class="input-group">
-            <input type="text" id="lineInput" placeholder="Linija (npr. 31, 860MV, 3A)" onkeypress="handleEnter(event)">
-            <button id="addBtn" onclick="dodajLiniju()">+</button>
-        </div>
-        <ul id="activeLines"></ul>
-        <div class="status-bar">
-            Osvežavanje za: <b><span id="countdown">--</span>s</b><br>
-            <span id="statusText">Unesi liniju...</span>
-        </div>
-    </div>
-    <div id="map"></div>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script>${clientScript}</script>
+ 
+    </script>
 </body>
 </html>
-    `;
+  `;
 
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.status(200).send(html);
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.status(200).send(html);
 }
