@@ -307,6 +307,19 @@
     <script>
         let allData = [];
 
+        // Funkcija za parsiranje datuma u format dd.mm.yyyy.
+        function parseDate(dateStr) {
+            // Očekivani format: "28.11.2025."
+            const parts = dateStr.replace('.', '').split('.');
+            if (parts.length >= 3) {
+                const day = parseInt(parts[0]);
+                const month = parseInt(parts[1]) - 1; // Meseci su 0-11
+                const year = parseInt(parts[2]);
+                return new Date(year, month, day);
+            }
+            return new Date(0); // Ako format nije ispravan, vrati najstariji datum
+        }
+
         async function loadData() {
             const tbody = document.getElementById('tableBody');
             tbody.innerHTML = '<tr><td colspan="5" class="loading">Učitavam podatke</td></tr>';
@@ -316,7 +329,28 @@
                 const data = await response.json();
 
                 if (data.success && data.vehicles) {
-                    allData = data.vehicles;
+                    // Ukloni duplikate - zadrži samo najnoviji unos za svako vozilo
+                    const vehicleMap = new Map();
+                    
+                    data.vehicles.forEach(vehicle => {
+                        const existing = vehicleMap.get(vehicle.vozilo);
+                        
+                        if (!existing) {
+                            // Prvo pojavljivanje ovog vozila
+                            vehicleMap.set(vehicle.vozilo, vehicle);
+                        } else {
+                            // Uporedi datume i zadrži noviji
+                            const existingDate = parseDate(existing.datum);
+                            const currentDate = parseDate(vehicle.datum);
+                            
+                            if (currentDate > existingDate) {
+                                vehicleMap.set(vehicle.vozilo, vehicle);
+                            }
+                        }
+                    });
+                    
+                    // Konvertuj Map nazad u array
+                    allData = Array.from(vehicleMap.values());
                     
                     // Sortiraj po broju vozila (numerički)
                     allData.sort((a, b) => {
