@@ -435,6 +435,24 @@ export default function handler(req, res) {
                             vehicleShapeMap[update.vehicleId] = update.shapeId;
                         }
                     });
+
+                                  // PRVO: Popuni directionColorMap
+                    const vozila = vehicles.filter(v => {
+                          const routeId = normalizeRouteId(v.routeId);
+                          return izabraneLinije.includes(routeId);
+                      });
+              
+                    vozila.forEach(v => {
+                          const route = normalizeRouteId(v.routeId);
+                          const vehicleId = v.id;
+                          const destId = vehicleDestinations[vehicleId] || "Unknown";
+                          const uniqueDirKey = `${route}_${destId}`;
+                          
+                         if (!directionColorMap[uniqueDirKey]) {
+                              const nextColorIndex = Object.keys(directionColorMap).length % colors.length;
+                              directionColorMap[uniqueDirKey] = colors[nextColorIndex];
+                          }
+                      });
                     
                     // NEW: Draw routes first, then vehicles on top
                     drawAllRoutes();
