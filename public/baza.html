@@ -13,15 +13,14 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 10px;
+            padding: 20px;
         }
 
         .container {
-            max-width: 100%;
-            margin: 0;
-            padding: 0;
+            max-width: 1400px;
+            margin: 0 auto;
         }
 
         .header {
@@ -52,7 +51,7 @@
         }
 
         .stat-box {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 12px 20px;
             border-radius: 8px;
@@ -104,15 +103,15 @@
 
         input:focus {
             outline: none;
-            border-color: #1e3c72;
-            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         .table-container {
             background: white;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            overflow-x: auto;
+            overflow: hidden;
         }
 
         table {
@@ -121,30 +120,23 @@
         }
 
         thead {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
         }
 
         th {
-            padding: 16px 20px;
+            padding: 15px;
             text-align: left;
             font-weight: 600;
-            font-size: 13px;
+            font-size: 14px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        th:nth-child(1) { white-space: nowrap; } /* VOZILO */
-        th:nth-child(2) { white-space: nowrap; } /* LINIJA */
-        th:nth-child(3) { white-space: nowrap; } /* POLAZAK */
-        th:nth-child(4) { width: 100%; } /* SMER */
-
         td {
-            padding: 16px 20px;
+            padding: 15px;
             border-bottom: 1px solid #f0f0f0;
             color: #333;
-            font-size: 15px;
-            word-wrap: break-word;
         }
 
         tbody tr {
@@ -152,7 +144,7 @@
         }
 
         tbody tr:hover {
-            background: #f0f4ff;
+            background: #f8f9ff;
         }
 
         .no-data {
@@ -165,7 +157,7 @@
         .loading {
             text-align: center;
             padding: 40px;
-            color: #1e3c72;
+            color: #667eea;
             font-size: 18px;
         }
 
@@ -181,7 +173,7 @@
         }
 
         .refresh-btn {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
             padding: 12px 25px;
@@ -197,7 +189,7 @@
 
         .refresh-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(30, 60, 114, 0.4);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
 
         .refresh-btn:active {
@@ -223,17 +215,12 @@
             }
 
             table {
-                font-size: 13px;
+                font-size: 12px;
             }
 
             th, td {
-                padding: 12px 10px;
+                padding: 10px;
             }
-
-            th:nth-child(1) { width: auto; }
-            th:nth-child(2) { width: auto; }
-            th:nth-child(3) { width: auto; }
-            th:nth-child(4) { width: auto; }
         }
     </style>
 </head>
@@ -241,9 +228,9 @@
     <div class="container">
         <div class="header">
             <div>
-                <h1>Baza Vozila</h1>
+                <h1>🚌 Baza Vozila</h1>
                 <div class="last-update" id="lastUpdate">
-                     Učitavam podatke...
+                    ⏱️ Učitavam podatke...
                 </div>
             </div>
             <div class="stats">
@@ -263,19 +250,19 @@
 
         <div class="controls">
             <div class="search-group">
-                <label for="searchVehicle">Pretraži vozilo:</label>
+                <label for="searchVehicle">🔍 Pretraži vozilo:</label>
                 <input type="text" id="searchVehicle" placeholder="Npr. 2503" oninput="filterTable()">
             </div>
             <div class="search-group">
-                <label for="searchRoute">Pretraži liniju:</label>
+                <label for="searchRoute">🚏 Pretraži liniju:</label>
                 <input type="text" id="searchRoute" placeholder="Npr. 31" oninput="filterTable()">
             </div>
             <div class="search-group">
-                <label for="searchDeparture">Pretraži polazak:</label>
+                <label for="searchDeparture">⏰ Pretraži polazak:</label>
                 <input type="text" id="searchDeparture" placeholder="Npr. 12:30" oninput="filterTable()">
             </div>
             <div class="search-group">
-                <label for="searchDirection">Pretraži smer:</label>
+                <label for="searchDirection">📍 Pretraži smer:</label>
                 <input type="text" id="searchDirection" placeholder="Npr. Vukov Spomenik" oninput="filterTable()">
             </div>
         </div>
@@ -329,13 +316,13 @@
                         minute: '2-digit',
                         second: '2-digit'
                     });
-                    lastUpdate.innerHTML = `Poslednje ažuriranje: <strong>${time}</strong>`;
+                    lastUpdate.innerHTML = `⏱️ Poslednje ažuriranje: <strong>${time}</strong>`;
                 } else {
                     tbody.innerHTML = '<tr><td colspan="4" class="no-data">Nema podataka</td></tr>';
                 }
             } catch (error) {
                 console.error('Greška:', error);
-                tbody.innerHTML = '<tr><td colspan="4" class="no-data">Greška pri učitavanju podataka</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="no-data">❌ Greška pri učitavanju podataka</td></tr>';
             }
         }
 
@@ -386,6 +373,8 @@
         // Učitaj podatke pri startovanju
         loadData();
 
+        // Auto-refresh svakih 60 sekundi
+        setInterval(loadData, 60000);
     </script>
 </body>
 </html>
