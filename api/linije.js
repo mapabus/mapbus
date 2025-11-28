@@ -331,7 +331,7 @@ export default function handler(req, res) {
                     }
                 }
                 
-                console.log(`Route ${routeId}: found ${matchingShapes.length} shapes`);
+                console.log(\`Route \${routeId}: found \${matchingShapes.length} shapes\`);
                 
                 // Nacrtaj svaki shape sa odgovarajućom bojom
                 matchingShapes.forEach(shapeKey => {
@@ -443,9 +443,16 @@ export default function handler(req, res) {
                         // Mapiraj shape ID na boju
                         const shapeId = vehicleShapeMap[vehicleId];
                         if (shapeId) {
-                            shapeToColorMap[shapeId] = directionColorMap[uniqueDirKey];
+                            // Ako već postoji boja za ovaj shape, ne prepisuj je
+                            if (!shapeToColorMap[shapeId]) {
+                                shapeToColorMap[shapeId] = directionColorMap[uniqueDirKey];
+                                console.log(\`Mapiranje: \${shapeId} -> \${directionColorMap[uniqueDirKey]} (dest: \${destId})\`);
+                            }
                         }
                     });
+                    
+                    console.log('Shape to Color Map:', shapeToColorMap);
+                    console.log('Direction Color Map:', directionColorMap);
                     
                     // ZATIM: Crtaj rute sa popunjenim bojama
                     drawAllRoutes(shapeToColorMap);
