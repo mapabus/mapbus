@@ -313,114 +313,58 @@ export default function handler(req, res) {
             return routeId;
         }
 
-function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3; // Radijus Zemlje u metrima
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-            Math.cos(φ1) * Math.cos(φ2) *
-            Math.sin(Δλ/2) * Math.sin(Δλ/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-    return R * c; // Vraća udaljenost u metrima
-}
-
-function drawAllRoutes() {
-    routeLayer.clearLayers();
-    
-    if (izabraneLinije.length === 0) return;
-    
-    let allBounds = [];
-    
-    izabraneLinije.forEach(routeId => {
-        const paddedRouteId = padRouteId(routeId);
-        
-        // Pronađi sve shapes za ovu rutu
-        let matchingShapes = [];
-        for (let shapeKey in shapesData) {
-            if (shapeKey.startsWith(routeId + '_') || shapeKey.startsWith(paddedRouteId + '_')) {
-                matchingShapes.push(shapeKey);
-            }
-        }
-        
-        console.log(`Route ${routeId}: found ${matchingShapes.length} shapes`);
-        
-        // Za svaki shape, pokušaj da odrediš pravu boju na osnovu destinacije
-        matchingShapes.forEach(shapeKey => {
-            const shapePoints = shapesData[shapeKey];
+        function drawAllRoutes() {
+            routeLayer.clearLayers();
             
-            if (!shapePoints || shapePoints.length === 0) return;
+            if (izabraneLinije.length === 0) return;
             
-            let shapeColor = shapeToColorMapGlobal[shapeKey];
+            let allBounds = [];
             
-            // Ako još nema boju, pokušaj da je odrediš na osnovu krajnje tačke
-            if (!shapeColor) {
-                const lastPoint = shapePoints[shapePoints.length - 1];
+            izabraneLinije.forEach(routeId => {
+                const paddedRouteId = padRouteId(routeId);
                 
-                // Pronađi sve destinacije za ovu rutu
-                let bestMatch = null;
-                let minDistance = Infinity;
-                
-                for (let dirKey in directionColorMap) {
-                    if (dirKey.startsWith(routeId + '_')) {
-                        const destId = dirKey.split('_')[1];
-                        const normalizedDestId = normalizeStopId(destId);
-                        const destStation = stationsMap[normalizedDestId];
-                        
-                        if (destStation && destStation.coords) {
-                            const distance = calculateDistance(
-                                lastPoint.lat, lastPoint.lon,
-                                destStation.coords[0], destStation.coords[1]
-                            );
-                            
-                            console.log(`Shape ${shapeKey} -> Dest ${destId} (${destStation.name}): ${distance.toFixed(2)}m`);
-                            
-                            if (distance < minDistance) {
-                                minDistance = distance;
-                                bestMatch = dirKey;
-                            }
-                        }
+                let matchingShapes = [];
+                for (let shapeKey in shapesData) {
+                    if (shapeKey.startsWith(routeId + '_') || shapeKey.startsWith(paddedRouteId + '_')) {
+                        matchingShapes.push(shapeKey);
                     }
                 }
                 
-                if (bestMatch && minDistance < 500) { // Ako je manje od 500m, smatramo da je to prava destinacija
-                    shapeColor = directionColorMap[bestMatch];
-                    shapeToColorMapGlobal[shapeKey] = shapeColor;
-                    console.log(`✓ Auto-mapiranje: ${shapeKey} -> ${shapeColor} (distance: ${minDistance.toFixed(2)}m)`);
-                } else {
-                    shapeColor = '#95a5a6'; // Siva boja ako ne možemo da odredimo
-                }
-            }
-            
-            console.log(`Drawing shape ${shapeKey} with color ${shapeColor}`);
-            
-            const latLngs = shapePoints.map(point => [point.lat, point.lon]);
-            
-            const polyline = L.polyline(latLngs, {
-                color: shapeColor,
-                weight: 4,
-                opacity: 0.6,
-                smoothFactor: 1
+                console.log(\`Route \${routeId}: found \${matchingShapes.length} shapes\`);
+                
+                matchingShapes.forEach(shapeKey => {
+                    const shapePoints = shapesData[shapeKey];
+                    
+                    if (!shapePoints || shapePoints.length === 0) return;
+                    
+                    let shapeColor = shapeToColorMapGlobal[shapeKey] || '#95a5a6';
+                    
+                    console.log(\`Drawing shape \${shapeKey} with color \${shapeColor}\`);
+                    
+                    const latLngs = shapePoints.map(point => [point.lat, point.lon]);
+                    
+                    const polyline = L.polyline(latLngs, {
+                        color: shapeColor,
+                        weight: 4,
+                        opacity: 0.6,
+                        smoothFactor: 1
+                    });
+                    
+                    polyline.addTo(routeLayer);
+                    allBounds.push(polyline.getBounds());
+                });
             });
             
-            polyline.addTo(routeLayer);
-            allBounds.push(polyline.getBounds());
-        });
-    });
-    
-    if (allBounds.length > 0) {
-        const combinedBounds = allBounds.reduce((acc, bounds) => {
-            return acc.extend(bounds);
-        }, allBounds[0]);
-        
-        map.fitBounds(combinedBounds, {
-            padding: [50, 50]
-        });
-    }
-}
+            if (allBounds.length > 0) {
+                const combinedBounds = allBounds.reduce((acc, bounds) => {
+                    return acc.extend(bounds);
+                }, allBounds[0]);
+                
+                map.fitBounds(combinedBounds, {
+                    padding: [50, 50]
+                });
+            }
+        }
  
 
  
