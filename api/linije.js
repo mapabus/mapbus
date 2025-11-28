@@ -638,6 +638,62 @@ export default function handler(req, res) {
                     .addTo(busLayer);
             });
         }
+
+        async function azurirajGoogleSheet() {
+    if (izabraneLinije.length === 0) return;
+    
+    try {
+        const vehicleData = [];
+        
+        // Preuzmi trenutne podatke o vozilima
+        const response = await fetch('/api/vehicles', { 
+            method: 'GET',
+            cache: 'no-store'
+        });
+        
+        if (!response.ok) return;
+        const data = await response.json();
+        
+        if (!data || !data.vehicles) return;
+        
+        const vehicleDestinations = {};
+        data.tripUpdates.forEach(update => {
+            vehicleDestinations[update.vehicleId] = update.destination;
+        });
+        
+        const vozila = data.vehicles.filter(v => {
+            const routeId = normalizeRouteId(v.routeId);
+            return izabraneLinije.includes(routeId);
+        });
+        
+        vozila.forEach(v => {
+            const destId = vehicleDestinations[v.id] || "Unknown";
+            const normalizedId = normalizeStopId(destId);
+            const station = stationsMap[normalizedId];
+            const destName = station ? station.name : destId;
+            const routeDisplayName = getRouteDisplayName(v.routeId);
+            
+            vehicleData.push({
+                vehicleLabel: v.label,
+                routeDisplayName: routeDisplayName,
+                startTime: v.startTime || "N/A",
+                destName: destName
+            });
+        });
+        
+        await fetch('/api/update-sheet', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ vehicles: vehicleData })
+        });
+        
+        console.log('✓ Google Sheets ažuriran');
+    } catch (error) {
+        console.error('✗ Greška pri ažuriranju Sheets:', error);
+    }
+}
  
         function calculateBearing(startLat, startLng, destLat, destLng) {
             const y = Math.sin((destLng - startLng) * Math.PI / 180) * Math.cos(destLat * Math.PI / 180);
