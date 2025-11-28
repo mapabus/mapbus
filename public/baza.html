@@ -259,7 +259,6 @@
                     <span class="stat-label">Linija</span>
                 </div>
             </div>
-
         </div>
 
         <div class="controls">
@@ -321,8 +320,8 @@
                     
                     // Sortiraj po broju vozila (numerički)
                     allData.sort((a, b) => {
-                        const numA = parseInt(a.vozilo) || 0;
-                        const numB = parseInt(b.vozilo) || 0;
+                        const numA = parseInt(a.vozilo.replace(/\D/g, '')) || 0;
+                        const numB = parseInt(b.vozilo.replace(/\D/g, '')) || 0;
                         return numA - numB;
                     });
 
@@ -353,10 +352,11 @@
                 return;
             }
 
-            // Sortiranje pre prikaza
+            // UVEK sortiranje po broju vozila pre prikaza
             const sortedData = [...data].sort((a, b) => {
-                const numA = parseInt(a.vozilo) || 0;
-                const numB = parseInt(b.vozilo) || 0;
+                // Ekstraktuj broj iz stringa (npr. P70618 -> 70618)
+                const numA = parseInt(a.vozilo.replace(/\D/g, '')) || 0;
+                const numB = parseInt(b.vozilo.replace(/\D/g, '')) || 0;
                 return numA - numB;
             });
 
@@ -401,8 +401,6 @@
 
         // Učitaj podatke pri startovanju
         loadData();
-
-
     </script>
 </body>
 </html>
