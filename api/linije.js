@@ -313,7 +313,7 @@ export default function handler(req, res) {
             return routeId;
         }
 
-function drawAllRoutes(shapeToColorMap = {}) {
+        function drawAllRoutes(shapeToColorMap = {}) {
             routeLayer.clearLayers();
             
             if (izabraneLinije.length === 0) return;
@@ -331,7 +331,7 @@ function drawAllRoutes(shapeToColorMap = {}) {
                     }
                 }
                 
-                console.log(`Route ${routeId}: found ${matchingShapes.length} shapes`);
+                console.log(\`Route \${routeId}: found \${matchingShapes.length} shapes\`);
                 
                 // Nacrtaj svaki shape sa odgovarajućom bojom
                 matchingShapes.forEach(shapeKey => {
@@ -421,12 +421,14 @@ function drawAllRoutes(shapeToColorMap = {}) {
                         }
                     });
                     
-                    // PRVO: Popuni directionColorMap
+                    // PRVO: Popuni directionColorMap i kreiraj shapeToColorMap
                     const vozila = data.vehicles.filter(v => {
                         const routeId = normalizeRouteId(v.routeId);
                         return izabraneLinije.includes(routeId);
                     });
 
+                    const shapeToColorMap = {};
+                    
                     vozila.forEach(v => {
                         const route = normalizeRouteId(v.routeId);
                         const vehicleId = v.id;
@@ -437,10 +439,16 @@ function drawAllRoutes(shapeToColorMap = {}) {
                             const nextColorIndex = Object.keys(directionColorMap).length % colors.length;
                             directionColorMap[uniqueDirKey] = colors[nextColorIndex];
                         }
+                        
+                        // Mapiraj shape ID na boju
+                        const shapeId = vehicleShapeMap[vehicleId];
+                        if (shapeId) {
+                            shapeToColorMap[shapeId] = directionColorMap[uniqueDirKey];
+                        }
                     });
                     
                     // ZATIM: Crtaj rute sa popunjenim bojama
-                    drawAllRoutes();
+                    drawAllRoutes(shapeToColorMap);
                     crtajVozila(data.vehicles, vehicleDestinations);
                     
                     const timeStr = new Date().toLocaleTimeString();
