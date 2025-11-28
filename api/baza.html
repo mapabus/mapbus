@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baza Vozila - Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 28px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .search-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        label {
+            font-weight: 600;
+            color: #555;
+            font-size: 13px;
+        }
+
+        input {
+            padding: 10px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            color: #333;
+        }
+
+        tbody tr {
+            transition: background 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #f8f9ff;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 16px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+            font-size: 18px;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .refresh-btn:active {
+            transform: translateY(0);
+        }
+
+        .last-update {
+            color: #666;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .controls {
+                grid-template-columns: 1fr;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            th, td {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>🚌 Baza Vozila</h1>
+                <div class="last-update" id="lastUpdate">
+                    ⏱️ Učitavam podatke...
+                </div>
+            </div>
+            <div class="stats">
+                <div class="stat-box">
+                    <span class="stat-number" id="totalVehicles">-</span>
+                    <span class="stat-label">Ukupno vozila</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number" id="totalRoutes">-</span>
+                    <span class="stat-label">Aktivne linije</span>
+                </div>
+            </div>
+            <button class="refresh-btn" onclick="loadData()">
+                🔄 Osveži
+            </button>
+        </div>
+
+        <div class="controls">
+            <div class="search-group">
+                <label for="searchVehicle">🔍 Pretraži vozilo:</label>
+                <input type="text" id="searchVehicle" placeholder="Npr. 2503" oninput="filterTable()">
+            </div>
+            <div class="search-group">
+                <label for="searchRoute">🚏 Pretraži liniju:</label>
+                <input type="text" id="searchRoute" placeholder="Npr. 31" oninput="filterTable()">
+            </div>
+            <div class="search-group">
+                <label for="searchDeparture">⏰ Pretraži polazak:</label>
+                <input type="text" id="searchDeparture" placeholder="Npr. 12:30" oninput="filterTable()">
+            </div>
+            <div class="search-group">
+                <label for="searchDirection">📍 Pretraži smer:</label>
+                <input type="text" id="searchDirection" placeholder="Npr. Vukov Spomenik" oninput="filterTable()">
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Vozilo</th>
+                        <th>Linija</th>
+                        <th>Polazak</th>
+                        <th>Smer</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="4" class="loading">Učitavam podatke</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let allData = [];
+
+        async function loadData() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '<tr><td colspan="4" class="loading">Učitavam podatke</td></tr>';
+
+            try {
+                const response = await fetch('/api/get-sheet-data');
+                const data = await response.json();
+
+                if (data.success && data.vehicles) {
+                    allData = data.vehicles;
+                    
+                    // Sortiraj po broju vozila (numerički)
+                    allData.sort((a, b) => {
+                        const numA = parseInt(a.vozilo) || 0;
+                        const numB = parseInt(b.vozilo) || 0;
+                        return numA - numB;
+                    });
+
+                    renderTable(allData);
+                    updateStats(allData);
+                    
+                    const lastUpdate = document.getElementById('lastUpdate');
+                    const time = new Date().toLocaleString('sr-RS', { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    lastUpdate.innerHTML = `⏱️ Poslednje ažuriranje: <strong>${time}</strong>`;
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="4" class="no-data">Nema podataka</td></tr>';
+                }
+            } catch (error) {
+                console.error('Greška:', error);
+                tbody.innerHTML = '<tr><td colspan="4" class="no-data">❌ Greška pri učitavanju podataka</td></tr>';
+            }
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="no-data">Nema rezultata</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(vehicle => `
+                <tr>
+                    <td><strong>${vehicle.vozilo}</strong></td>
+                    <td>${vehicle.linija}</td>
+                    <td>${vehicle.polazak}</td>
+                    <td>${vehicle.smer}</td>
+                </tr>
+            `).join('');
+        }
+
+        function filterTable() {
+            const vehicleSearch = document.getElementById('searchVehicle').value.toLowerCase();
+            const routeSearch = document.getElementById('searchRoute').value.toLowerCase();
+            const departureSearch = document.getElementById('searchDeparture').value.toLowerCase();
+            const directionSearch = document.getElementById('searchDirection').value.toLowerCase();
+
+            const filtered = allData.filter(vehicle => {
+                return (
+                    vehicle.vozilo.toLowerCase().includes(vehicleSearch) &&
+                    vehicle.linija.toLowerCase().includes(routeSearch) &&
+                    vehicle.polazak.toLowerCase().includes(departureSearch) &&
+                    vehicle.smer.toLowerCase().includes(directionSearch)
+                );
+            });
+
+            renderTable(filtered);
+            updateStats(filtered);
+        }
+
+        function updateStats(data) {
+            document.getElementById('totalVehicles').textContent = data.length;
+            
+            const uniqueRoutes = new Set(data.map(v => v.linija));
+            document.getElementById('totalRoutes').textContent = uniqueRoutes.size;
+        }
+
+        // Učitaj podatke pri startovanju
+        loadData();
+
+        // Auto-refresh svakih 60 sekundi
+        setInterval(loadData, 60000);
+    </script>
+</body>
+</html>
