@@ -193,6 +193,21 @@ export default function handler(req, res) {
             return routeNamesMap[normalizedId] || normalizedId;
         }
 
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                    Math.cos(φ1) * Math.cos(φ2) *
+                    Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+            return R * c;
+        }
+
 
         
         function findRouteId(userInput) {
@@ -313,7 +328,45 @@ export default function handler(req, res) {
             return routeId;
         }
 
-        function drawAllRoutes() {
+        function determineShapeColorByDestination(shapeKey, routeId, vehicleDestinations) {
+            const shapePoints = shapesData[shapeKey];
+            if (!shapePoints || shapePoints.length === 0) return '#95a5a6';
+            
+            const lastPoint = shapePoints[shapePoints.length - 1];
+            
+            let bestMatch = null;
+            let minDistance = Infinity;
+            
+            for (const [vehicleId, destId] of Object.entries(vehicleDestinations)) {
+                const normalizedDestId = normalizeStopId(destId);
+                const station = stationsMap[normalizedDestId];
+                
+                if (station && station.coords) {
+                    const distance = calculateDistance(
+                        lastPoint.lat, lastPoint.lon,
+                        station.coords[0], station.coords[1]
+                    );
+                    
+                    if (distance < minDistance && distance < 500) {
+                        minDistance = distance;
+                        bestMatch = destId;
+                    }
+                }
+            }
+            
+            if (bestMatch) {
+                const uniqueDirKey = \`\${routeId}_\${bestMatch}\`;
+                const color = directionColorMap[uniqueDirKey];
+                if (color) {
+                    console.log(\`✓ Shape \${shapeKey} obojen u \${color} (destinacija: \${bestMatch}, udaljenost: \${minDistance.toFixed(0)}m)\`);
+                    return color;
+                }
+            }
+            
+            return '#95a5a6';
+        }
+
+        function drawAllRoutes(vehicleDestinations) {
             routeLayer.clearLayers();
             
             if (izabraneLinije.length === 0) return;
@@ -337,7 +390,12 @@ export default function handler(req, res) {
                     
                     if (!shapePoints || shapePoints.length === 0) return;
                     
-                    let shapeColor = shapeToColorMapGlobal[shapeKey] || '#95a5a6';
+                    let shapeColor = shapeToColorMapGlobal[shapeKey];
+                    
+                    if (!shapeColor) {
+                        shapeColor = determineShapeColorByDestination(shapeKey, routeId, vehicleDestinations);
+                        shapeToColorMapGlobal[shapeKey] = shapeColor;
+                    }
                     
                     console.log(\`Drawing shape \${shapeKey} with color \${shapeColor}\`);
                     
@@ -401,13 +459,11 @@ export default function handler(req, res) {
 
                     const vehicleDestinations = {};
                     vehicleShapeMap = {};
-                    const shapeToDestMap = {};
                     
                     data.tripUpdates.forEach(update => {
                         vehicleDestinations[update.vehicleId] = update.destination;
                         if (update.shapeId) {
                             vehicleShapeMap[update.vehicleId] = update.shapeId;
-                            shapeToDestMap[update.shapeId] = update.destination;
                         }
                     });
                     
@@ -431,31 +487,15 @@ export default function handler(req, res) {
                         if (shapeId) {
                             if (!shapeToColorMapGlobal[shapeId]) {
                                 shapeToColorMapGlobal[shapeId] = directionColorMap[uniqueDirKey];
-                                console.log(\`✓ Mapiranje: \${shapeId} -> \${directionColorMap[uniqueDirKey]} (dest: \${destId})\`);
+                                console.log(\`✓ Direktno mapiranje: \${shapeId} -> \${directionColorMap[uniqueDirKey]} (dest: \${destId})\`);
                             }
                         }
                     });
                     
-                    for (let shapeKey in shapesData) {
-                        if (shapeToColorMapGlobal[shapeKey]) continue;
-                        
-                        const destId = shapeToDestMap[shapeKey];
-                        if (destId) {
-                            for (let route of izabraneLinije) {
-                                const uniqueDirKey = \`\${route}_\${destId}\`;
-                                if (directionColorMap[uniqueDirKey]) {
-                                    shapeToColorMapGlobal[shapeKey] = directionColorMap[uniqueDirKey];
-                                    console.log(\`✓ Dodatno mapiranje: \${shapeKey} -> \${directionColorMap[uniqueDirKey]} (dest: \${destId})\`);
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    
-                    console.log('Shape to Color Map:', shapeToColorMapGlobal);
                     console.log('Direction Color Map:', directionColorMap);
+                    console.log('Vehicle Destinations:', vehicleDestinations);
                     
-                    drawAllRoutes();
+                    drawAllRoutes(vehicleDestinations);
                     crtajVozila(data.vehicles, vehicleDestinations);
                     
                     const timeStr = new Date().toLocaleTimeString();
