@@ -377,7 +377,11 @@
                 const data = await response.json();
 
                 if (data.success && data.vehicles) {
-                    allData = data.vehicles;
+    // Dodaj rowIndex svakom vozilu
+    allData = data.vehicles.map((vehicle, index) => ({
+        ...vehicle,
+        rowIndex: index
+    }));
                     
                     // Sortiraj po broju vozila (default)
                     allData.sort((a, b) => {
@@ -422,6 +426,10 @@
                 } else if (sortBy === 'recent') {
                     // Sortiraj po timestamp-u (najnoviji prvo)
                     return b.timestamp.localeCompare(a.timestamp);
+                } else if (sortBy === 'newest') {
+    // Sortiraj po redosledu iz Sheet-a (poslednje prvo)
+    return b.rowIndex - a.rowIndex;
+} else {
                 } else {
                     const numA = parseInt(a.vozilo.replace(/\D/g, '')) || 0;
                     const numB = parseInt(b.vozilo.replace(/\D/g, '')) || 0;
