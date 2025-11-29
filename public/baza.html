@@ -237,7 +237,8 @@
                 opacity: 1;
             }
         }
-@media (max-width: 768px) {
+
+        @media (max-width: 768px) {
             .header {
                 flex-direction: column;
                 align-items: flex-start;
@@ -256,7 +257,6 @@
                 padding: 10px 6px;
             }
 
-            /* Manje kolone za vozilo i liniju */
             th:nth-child(1), td:nth-child(1) { 
                 width: 15%;
                 font-size: 12px;
@@ -276,12 +276,10 @@
                 font-size: 10px;
             }
 
-            /* Skraćeni header tekst */
             th:nth-child(5) {
                 font-size: 11px;
             }
-}
-        
+        }
     </style>
 </head>
 <body>
@@ -303,8 +301,6 @@
                 </div>
             </div>
         </div>
-
-       
 
         <div class="controls">
             <div class="search-group">
@@ -377,11 +373,11 @@
                 const data = await response.json();
 
                 if (data.success && data.vehicles) {
-    // Dodaj rowIndex svakom vozilu
-    allData = data.vehicles.map((vehicle, index) => ({
-        ...vehicle,
-        rowIndex: index
-    }));
+                    // Dodaj rowIndex svakom vozilu
+                    allData = data.vehicles.map((vehicle, index) => ({
+                        ...vehicle,
+                        rowIndex: index
+                    }));
                     
                     // Sortiraj po broju vozila (default)
                     allData.sort((a, b) => {
@@ -427,9 +423,8 @@
                     // Sortiraj po timestamp-u (najnoviji prvo)
                     return b.timestamp.localeCompare(a.timestamp);
                 } else if (sortBy === 'newest') {
-    // Sortiraj po redosledu iz Sheet-a (poslednje prvo)
-    return b.rowIndex - a.rowIndex;
-} else {
+                    // Sortiraj po redosledu iz Sheet-a (poslednje prvo)
+                    return b.rowIndex - a.rowIndex;
                 } else {
                     const numA = parseInt(a.vozilo.replace(/\D/g, '')) || 0;
                     const numB = parseInt(b.vozilo.replace(/\D/g, '')) || 0;
@@ -503,6 +498,7 @@
             renderTable(filtered);
             updateStats(filtered);
         }
+
         function updateStats(data) {
             document.getElementById('totalVehicles').textContent = data.length;
             
@@ -512,8 +508,6 @@
 
         // Inicijalizacija
         loadData(false);
-
-
     </script>
 </body>
 </html>
