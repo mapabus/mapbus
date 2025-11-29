@@ -44,6 +44,12 @@
             gap: 10px;
         }
 
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
         .stats {
             display: flex;
             gap: 20px;
@@ -70,45 +76,24 @@
             opacity: 0.9;
         }
 
-        .date-selector {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        .info-banner {
+            background: #e3f2fd;
+            border-left: 4px solid #1e3c72;
+            padding: 15px 20px;
+            border-radius: 8px;
             margin-bottom: 20px;
             display: flex;
-            gap: 15px;
             align-items: center;
-            flex-wrap: wrap;
+            gap: 10px;
         }
 
-        .date-selector label {
-            font-weight: 600;
-            color: #555;
+        .info-banner-icon {
+            font-size: 24px;
         }
 
-        .date-selector input[type="date"] {
-            padding: 10px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
+        .info-banner-text {
+            color: #333;
             font-size: 14px;
-            cursor: pointer;
-        }
-
-        .date-selector button {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-
-        .date-selector button:hover {
-            transform: translateY(-2px);
         }
 
         .controls {
@@ -222,6 +207,37 @@
             60%, 100% { content: '...'; }
         }
 
+        .refresh-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(30, 60, 114, 0.95);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .refresh-indicator.show {
+            display: flex;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
         @media (max-width: 768px) {
             .header {
                 flex-direction: column;
@@ -247,7 +263,8 @@
     <div class="container">
         <div class="header">
             <div>
-                <h1>Baza Vozila</h1>
+                <h1>🚌 Baza Vozila</h1>
+                <div class="subtitle">Centralna baza svih vozila sa poslednjim podacima</div>
             </div>
             <div class="stats">
                 <div class="stat-box">
@@ -261,12 +278,13 @@
             </div>
         </div>
 
-        <div class="date-selector">
-            <label for="dateInput">Izaberi datum (od 29.11.2025.):</label>
-            <input type="date" id="dateInput">
-            <button onclick="loadDataForSelectedDate()">Učitaj</button>
-            <button onclick="loadToday()">Danas</button>
-            <span id="currentSheet" style="margin-left: 20px; color: #666; font-size: 14px;"></span>
+        <div class="info-banner">
+            <span class="info-banner-icon">ℹ️</span>
+            <div class="info-banner-text">
+                <strong>Napomena:</strong> Ova baza prikazuje SVA vozila ikad viđena na sistemu. 
+                Kolona "Poslednji put viđen" pokazuje kada je vozilo poslednji put bilo aktivno.
+                Baza se automatski ažurira svakih 60 sekundi.
+            </div>
         </div>
 
         <div class="controls">
@@ -291,6 +309,7 @@
                 <select id="sortBy" onchange="filterTable()" style="padding: 10px 15px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; cursor: pointer; background: white;">
                     <option value="vehicle">Broj vozila</option>
                     <option value="route">Broj linije</option>
+                    <option value="recent">Najskorije viđeno</option>
                 </select>
             </div>
         </div>
@@ -303,7 +322,7 @@
                         <th>Linija</th>
                         <th>Polazak</th>
                         <th>Smer (ide ka)</th>
-                        <th>Vreme upisa</th>
+                        <th>Poslednji put viđen</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -315,55 +334,32 @@
         </div>
     </div>
 
+    <div class="refresh-indicator" id="refreshIndicator">
+        <span>🔄</span>
+        <span>Ažuriram podatke...</span>
+    </div>
+
     <script>
         let allData = [];
 
-        // Postavi današnji datum po default-u
-        function setTodayDate() {
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            document.getElementById('dateInput').value = `${yyyy}-${mm}-${dd}`;
-        }
-
-        function loadToday() {
-            setTodayDate();
-            loadData();
-        }
-
-        function loadDataForSelectedDate() {
-            loadData();
-        }
-
-        async function loadData() {
+        async function loadData(silent = false) {
             const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '<tr><td colspan="5" class="loading">Učitavam podatke</td></tr>';
+            const refreshIndicator = document.getElementById('refreshIndicator');
+            
+            if (!silent) {
+                tbody.innerHTML = '<tr><td colspan="5" class="loading">Učitavam podatke</td></tr>';
+            } else {
+                refreshIndicator.classList.add('show');
+            }
 
             try {
                 const response = await fetch('/api/get-sheet-data');
                 const data = await response.json();
 
                 if (data.success && data.vehicles) {
-                    // Ukloni duplikate - zadrži samo najnoviji unos za svako vozilo
-                    const vehicleMap = new Map();
+                    allData = data.vehicles;
                     
-                    data.vehicles.forEach(vehicle => {
-                        const existing = vehicleMap.get(vehicle.vozilo);
-                        
-                        if (!existing) {
-                            vehicleMap.set(vehicle.vozilo, vehicle);
-                        } else {
-                            // Uporedi timestamp i zadrži noviji
-                            if (vehicle.timestamp > existing.timestamp) {
-                                vehicleMap.set(vehicle.vozilo, vehicle);
-                            }
-                        }
-                    });
-                    
-                    allData = Array.from(vehicleMap.values());
-                    
-                    // Sortiraj po broju vozila
+                    // Sortiraj po broju vozila (default)
                     allData.sort((a, b) => {
                         const numA = parseInt(a.vozilo.replace(/\D/g, '')) || 0;
                         const numB = parseInt(b.vozilo.replace(/\D/g, '')) || 0;
@@ -373,15 +369,19 @@
                     renderTable(allData);
                     updateStats(allData);
                     
-                    document.getElementById('currentSheet').textContent = 
-                        `Prikazujem: ${data.sheetName || 'Sheet1'} (${allData.length} vozila)`;
+                    console.log(`✓ Učitano ${allData.length} vozila iz baze`);
                 } else {
                     tbody.innerHTML = `<tr><td colspan="5" class="no-data">${data.message || 'Nema podataka'}</td></tr>`;
-                    document.getElementById('currentSheet').textContent = '';
                 }
             } catch (error) {
                 console.error('Greška:', error);
-                tbody.innerHTML = '<tr><td colspan="5" class="no-data">Greška pri učitavanju podataka</td></tr>';
+                if (!silent) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="no-data">❌ Greška pri učitavanju podataka</td></tr>';
+                }
+            } finally {
+                setTimeout(() => {
+                    refreshIndicator.classList.remove('show');
+                }, 2000);
             }
         }
 
@@ -399,6 +399,9 @@
                     const numA = parseInt(a.linija.replace(/\D/g, '')) || 0;
                     const numB = parseInt(b.linija.replace(/\D/g, '')) || 0;
                     return numA - numB;
+                } else if (sortBy === 'recent') {
+                    // Sortiraj po timestamp-u (najnoviji prvo)
+                    return b.timestamp.localeCompare(a.timestamp);
                 } else {
                     const numA = parseInt(a.vozilo.replace(/\D/g, '')) || 0;
                     const numB = parseInt(b.vozilo.replace(/\D/g, '')) || 0;
@@ -406,15 +409,31 @@
                 }
             });
 
-            tbody.innerHTML = sortedData.map(vehicle => `
-                <tr>
-                    <td><strong>${vehicle.vozilo}</strong></td>
-                    <td>${vehicle.linija}</td>
-                    <td>${vehicle.polazak}</td>
-                    <td>${vehicle.smer}</td>
-                    <td><small>${vehicle.timestamp}</small></td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = sortedData.map(vehicle => {
+                // Proveri koliko je vozilo staro
+                const lastSeen = new Date(vehicle.timestamp.split(',').join(''));
+                const now = new Date();
+                const diffHours = (now - lastSeen) / (1000 * 60 * 60);
+                
+                let timestampStyle = '';
+                if (diffHours < 1) {
+                    timestampStyle = 'color: #28a745; font-weight: bold;'; // Zeleno - aktivno
+                } else if (diffHours < 24) {
+                    timestampStyle = 'color: #ffc107;'; // Žuto - danas
+                } else {
+                    timestampStyle = 'color: #999;'; // Sivo - staro
+                }
+
+                return `
+                    <tr>
+                        <td><strong>${vehicle.vozilo}</strong></td>
+                        <td>${vehicle.linija}</td>
+                        <td>${vehicle.polazak}</td>
+                        <td>${vehicle.smer}</td>
+                        <td><small style="${timestampStyle}">${vehicle.timestamp}</small></td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         function filterTable() {
@@ -444,8 +463,7 @@
         }
 
         // Inicijalizacija
-        setTodayDate();
-        loadData();
+        loadData(false);
 
 
     </script>
