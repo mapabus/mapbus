@@ -262,7 +262,7 @@
         </div>
 
         <div class="date-selector">
-            <label for="dateInput">Izaberi datum:</label>
+            <label for="dateInput">Izaberi datum (od 29.11.2025.):</label>
             <input type="date" id="dateInput">
             <button onclick="loadDataForSelectedDate()">Učitaj</button>
             <button onclick="loadToday()">Danas</button>
@@ -374,7 +374,7 @@
                     updateStats(allData);
                     
                     document.getElementById('currentSheet').textContent = 
-                        `📊 Prikazujem: ${data.sheetName || 'Sheet1'} (${allData.length} vozila)`;
+                        `Prikazujem: ${data.sheetName || 'Sheet1'} (${allData.length} vozila)`;
                 } else {
                     tbody.innerHTML = `<tr><td colspan="5" class="no-data">${data.message || 'Nema podataka'}</td></tr>`;
                     document.getElementById('currentSheet').textContent = '';
