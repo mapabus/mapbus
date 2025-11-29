@@ -61,14 +61,8 @@ export default async function handler(req, res) {
       second: '2-digit'
     });
 
-    const dateStr = now.toLocaleDateString('sr-RS', {
-      timeZone: 'Europe/Belgrade',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    }).split('.').reverse().join('-').replace(/\.$/, '');
-
-    const sheetName = dateStr;
+    // KLJUČNA PROMENA: Uvek koristi sheet "Baza"
+    const sheetName = 'Baza';
     console.log(`Target sheet: ${sheetName}`);
 
     // Proveri da li sheet postoji, ako ne - kreiraj ga
@@ -83,6 +77,7 @@ export default async function handler(req, res) {
         sheetId = existingSheet.properties.sheetId;
         console.log(`✓ Sheet "${sheetName}" already exists (ID: ${sheetId})`);
       } else {
+        // Kreiraj sheet "Baza" ako ne postoji
         const addSheetResponse = await sheets.spreadsheets.batchUpdate({
           spreadsheetId,
           resource: {
@@ -104,6 +99,7 @@ export default async function handler(req, res) {
         sheetId = addSheetResponse.data.replies[0].addSheet.properties.sheetId;
         console.log(`✓ Created new sheet "${sheetName}" (ID: ${sheetId})`);
         
+        // Dodaj header
         await sheets.spreadsheets.values.update({
           spreadsheetId,
           range: `${sheetName}!A1:F1`,
@@ -113,6 +109,7 @@ export default async function handler(req, res) {
           }
         });
         
+        // Formatiraj header
         await sheets.spreadsheets.batchUpdate({
           spreadsheetId,
           resource: {
@@ -170,7 +167,7 @@ export default async function handler(req, res) {
       }
     });
 
-    // KLJUČNA PROMENA: Obrađuj sva vozila odjednom, ne po batch-evima za upis
+    // Obrađuj sva vozila
     const finalData = [...existingData];
     let newCount = 0;
     let updateCount = 0;
@@ -196,7 +193,6 @@ export default async function handler(req, res) {
         // Dodaj novi red
         finalData.push(rowData);
         newCount++;
-        // KLJUČNO: Odmah ažuriraj mapu
         existingVehicles.set(vehicleLabel, { 
           rowIndex: finalData.length + 1, 
           data: rowData 
@@ -206,7 +202,7 @@ export default async function handler(req, res) {
 
     console.log(`Processing: ${updateCount} updates, ${newCount} new vehicles`);
 
-    // BATCH UPIS: Podeli finalData u batch-eve za Google Sheets API
+    // BATCH UPIS
     const BATCH_SIZE = 500;
     const batches = [];
     
@@ -287,4 +283,4 @@ export default async function handler(req, res) {
       details: error.message
     });
   }
-                }
+}
