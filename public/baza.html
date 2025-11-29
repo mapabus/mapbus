@@ -237,8 +237,7 @@
                 opacity: 1;
             }
         }
-
-        @media (max-width: 768px) {
+@media (max-width: 768px) {
             .header {
                 flex-direction: column;
                 align-items: flex-start;
@@ -249,14 +248,43 @@
             }
 
             table {
-                font-size: 13px;
+                font-size: 11px;
                 table-layout: auto;
             }
 
             th, td {
-                padding: 12px 10px;
+                padding: 10px 6px;
             }
-        }
+
+            /* Manje kolone za vozilo i liniju */
+            th:nth-child(1), td:nth-child(1) { 
+                width: 15%;
+                font-size: 12px;
+            }
+            th:nth-child(2), td:nth-child(2) { 
+                width: 12%;
+            }
+            th:nth-child(3), td:nth-child(3) { 
+                width: 15%;
+            }
+            th:nth-child(4), td:nth-child(4) { 
+                width: 35%;
+                font-size: 11px;
+            }
+            th:nth-child(5), td:nth-child(5) { 
+                width: 23%;
+                font-size: 10px;
+            }
+
+            /* Skraćeni header tekst */
+            th:nth-child(5)::before {
+                content: 'Viđen';
+            }
+            th:nth-child(5) {
+                font-size: 0;
+            }
+}
+        
     </style>
 </head>
 <body>
