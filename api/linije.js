@@ -271,8 +271,8 @@ export default function handler(req, res) {
         async function loadShapes() {
             try {
                 const [shapesResponse, shapesGradskeResponse] = await Promise.all([
-                    fetch('/api/shapes.txt'),
-                    fetch('/api/shapes_gradske.txt')
+                  fetch('/api/shapes'),
+                  fetch('/api/shapes?file=gradske')
                 ]);
                 
                 const shapesText = await shapesResponse.text();
