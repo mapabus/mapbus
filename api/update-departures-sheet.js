@@ -293,40 +293,9 @@ export default async function handler(req, res) {
     const updateRequests = [];
     const appendRows = [];
 
-    // ===== NOVO: Grupisanje vozila po vremenu polaska =====
-    // Prvo transformišemo nove podatke da grupišemo vozila po istom vremenu
-    const processedRouteMap = {};
-    
-    for (let route in newRouteMap) {
-      processedRouteMap[route] = {};
-      
-      for (let direction in newRouteMap[route]) {
-        const departures = newRouteMap[route][direction];
-        const timeMap = new Map(); // startTime -> array of vehicles
-        
-        departures.forEach(dep => {
-          if (!timeMap.has(dep.startTime)) {
-            timeMap.set(dep.startTime, []);
-          }
-          timeMap.get(dep.startTime).push({
-            vehicleLabel: dep.vehicleLabel,
-            timestamp: dep.timestamp
-          });
-        });
-        
-        // Konvertuj u array sa spojenim vozilima
-        processedRouteMap[route][direction] = Array.from(timeMap.entries()).map(([time, vehicles]) => ({
-          startTime: time,
-          vehicles: vehicles,
-          vehicleLabels: vehicles.map(v => v.vehicleLabel).filter(l => l).join(' '),
-          timestamp: vehicles[0].timestamp // Koristi timestamp prvog vozila
-        })).sort((a, b) => a.startTime.localeCompare(b.startTime));
-      }
-    }
-
     // Prolazak kroz nove podatke
-    for (let route in processedRouteMap) {
-      const directions = processedRouteMap[route];
+    for (let route in newRouteMap) {
+      const directions = newRouteMap[route];
       
       // Ako linija ne postoji, dodaj celu strukturu
       if (!routeStructure.has(route)) {
@@ -342,12 +311,14 @@ export default async function handler(req, res) {
           appendRows.push([`Smer: ${direction}`, '', '', '', '', '', '', '', '', '']);
           appendRows.push(['Polazak', 'Vozilo', 'Poslednji put viđen', '', '', '', '', '', '', '']);
           
-          const departures = directions[direction];
+          const departures = directions[direction].sort((a, b) => 
+            a.startTime.localeCompare(b.startTime)
+          );
           
           departures.forEach(dep => {
             appendRows.push([
               dep.startTime,
-              dep.vehicleLabels,
+              dep.vehicleLabel,
               dep.timestamp,
               '', '', '', '', '', '', ''
             ]);
@@ -370,15 +341,19 @@ export default async function handler(req, res) {
             console.log(`New direction: ${route} -> ${direction}`);
             routeStructure.get(route).set(direction, []);
             
+            // Pronađi gde da ubacimo novi smer (nakon poslednjeg smera te linije)
+            // Za sada samo append na kraj
             appendRows.push([`Smer: ${direction}`, '', '', '', '', '', '', '', '', '']);
             appendRows.push(['Polazak', 'Vozilo', 'Poslednji put viđen', '', '', '', '', '', '', '']);
             
-            const departures = directions[direction];
+            const departures = directions[direction].sort((a, b) => 
+              a.startTime.localeCompare(b.startTime)
+            );
             
             departures.forEach(dep => {
               appendRows.push([
                 dep.startTime,
-                dep.vehicleLabels,
+                dep.vehicleLabel,
                 dep.timestamp,
                 '', '', '', '', '', '', ''
               ]);
@@ -394,45 +369,24 @@ export default async function handler(req, res) {
             const departures = directions[direction];
             
             departures.forEach(dep => {
-              // Proveravamo samo po vremenu, ne po vozilu
-              const timeKey = `${route}|${direction}|${dep.startTime}`;
+              const key = `${route}|${direction}|${dep.startTime}|${dep.vehicleLabel}`;
               
-              // Pronađi postojeći polazak sa istim vremenom
-              let existingDeparture = null;
-              for (let [key, value] of existingDeparturesMap.entries()) {
-                if (key.startsWith(timeKey + '|')) {
-                  existingDeparture = value;
-                  break;
-                }
-              }
-              
-              // Ako polazak sa tim vremenom već postoji
-              if (existingDeparture) {
-                const currentVehicles = existingDeparture.vehicleLabel.split(' ').filter(v => v);
-                const newVehicles = dep.vehicleLabels.split(' ').filter(v => v);
-                
-                // Kombinuj vozila (izbegni duplikate)
-                const allVehicles = [...new Set([...currentVehicles, ...newVehicles])];
-                const combinedVehicles = allVehicles.join(' ');
-                
-                // Ažuriraj i vozilo i timestamp
+              // Ako polazak već postoji, ažuriraj samo timestamp
+              if (existingDeparturesMap.has(key)) {
+                const existing = existingDeparturesMap.get(key);
                 updateRequests.push({
-                  range: `${sheetName}!B${existingDeparture.row + 1}:C${existingDeparture.row + 1}`,
-                  values: [[combinedVehicles, dep.timestamp]]
+                  range: `${sheetName}!C${existing.row + 1}`,
+                  values: [[dep.timestamp]]
                 });
-                
-                // Ažuriraj u mapi
-                existingDeparture.vehicleLabel = combinedVehicles;
-                existingDeparture.timestamp = dep.timestamp;
-                
                 updatedCount++;
-                console.log(`Updated ${dep.startTime}: ${combinedVehicles}`);
               }
               // Ako je novi polazak, dodaj ga
               else {
+                // Dodajemo na kraj smera - u appendRows
+                // (Alternativa: insert na pravo mesto sa sortiranjem)
                 appendRows.push([
                   dep.startTime,
-                  dep.vehicleLabels,
+                  dep.vehicleLabel,
                   dep.timestamp,
                   '', '', '', '', '', '', ''
                 ]);
@@ -587,4 +541,4 @@ export default async function handler(req, res) {
       details: error.message
     });
   }
-      }
+                                                        }
