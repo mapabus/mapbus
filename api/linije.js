@@ -3,6 +3,7 @@ export default function handler(req, res) {
 <!DOCTYPE html>
 <html lang="sr">
 <head>
+<script src="/auth-check.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Linije</title>
