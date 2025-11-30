@@ -42,7 +42,7 @@ export default async function handler(req, res) {
     try {
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USERS_SHEET}!A:G`,
+        range: `${USERS_SHEET}!A:H`, // Prošireno na H kolonu
       });
 
       const rows = response.data.values || [];
@@ -50,21 +50,22 @@ export default async function handler(req, res) {
       if (rows.length === 0) {
         await sheets.spreadsheets.values.update({
           spreadsheetId: SPREADSHEET_ID,
-          range: `${USERS_SHEET}!A1:G1`,
+          range: `${USERS_SHEET}!A1:H1`,
           valueInputOption: 'RAW',
           resource: {
-            values: [['Username', 'PasswordHash', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory', 'IsAdmin']]
+            values: [['Username', 'PasswordHash', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory', 'IsAdmin', 'LastAccess']]
           }
         });
       } else {
         users = rows.slice(1).map(row => ({
           username: row[0] || '',
-          passwordHash: row[1] || '', // Sada je heš umesto plain-text
+          passwordHash: row[1] || '',
           status: row[2] || 'pending',
           registeredAt: row[3] || '',
           lastIP: row[4] || '',
           ipHistory: row[5] || '',
           isAdmin: row[6] === 'true' || row[6] === 'TRUE' || false,
+          lastAccess: row[7] || '', // Nova kolona
         }));
       }
     } catch (error) {
@@ -86,10 +87,10 @@ export default async function handler(req, res) {
         
         await sheets.spreadsheets.values.update({
           spreadsheetId: SPREADSHEET_ID,
-          range: `${USERS_SHEET}!A1:G1`,
+          range: `${USERS_SHEET}!A1:H1`,
           valueInputOption: 'RAW',
           resource: {
-            values: [['Username', 'PasswordHash', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory', 'IsAdmin']]
+            values: [['Username', 'PasswordHash', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory', 'IsAdmin', 'LastAccess']]
           }
         });
         
@@ -124,14 +125,14 @@ export default async function handler(req, res) {
       }
 
       const now = new Date().toLocaleString('sr-RS', { timeZone: 'Europe/Belgrade' });
-      const hashedPassword = hashPassword(password); // Heširaj lozinku
+      const hashedPassword = hashPassword(password);
 
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USERS_SHEET}!A:G`,
+        range: `${USERS_SHEET}!A:H`,
         valueInputOption: 'RAW',
         resource: {
-          values: [[username, hashedPassword, 'pending', now, ip, ip, 'false']]
+          values: [[username, hashedPassword, 'pending', now, ip, ip, 'false', '']]
         }
       });
 
@@ -152,7 +153,6 @@ export default async function handler(req, res) {
         });
       }
 
-      // Verifikuj lozinku koristeći heš
       if (!verifyPassword(password, user.passwordHash)) {
         return res.status(401).json({ 
           success: false, 
@@ -167,16 +167,17 @@ export default async function handler(req, res) {
         });
       }
 
-      // Ažuriraj IP
+      // Ažuriraj IP i poslednji pristup
       const userIndex = users.findIndex(u => u.username === username);
       const ipHistory = user.ipHistory ? `${user.ipHistory}, ${ip}` : ip;
+      const now = new Date().toLocaleString('sr-RS', { timeZone: 'Europe/Belgrade' });
 
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USERS_SHEET}!E${userIndex + 2}:F${userIndex + 2}`,
+        range: `${USERS_SHEET}!E${userIndex + 2}:H${userIndex + 2}`,
         valueInputOption: 'RAW',
         resource: {
-          values: [[ip, ipHistory]]
+          values: [[ip, ipHistory, user.isAdmin ? 'true' : 'false', now]] // Dodato LastAccess
         }
       });
 
@@ -212,6 +213,19 @@ export default async function handler(req, res) {
           return res.status(401).json({ success: false, message: 'Token je istekao' });
         }
 
+        // Ažuriraj poslednji pristup pri svakoj verifikaciji
+        const userIndex = users.findIndex(u => u.username === tokenUsername);
+        const now = new Date().toLocaleString('sr-RS', { timeZone: 'Europe/Belgrade' });
+
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${USERS_SHEET}!H${userIndex + 2}`,
+          valueInputOption: 'RAW',
+          resource: {
+            values: [[now]]
+          }
+        });
+
         return res.status(200).json({ success: true, username: tokenUsername, isAdmin: user.isAdmin });
       } catch (e) {
         return res.status(401).json({ success: false, message: 'Nevažeći token' });
@@ -236,14 +250,14 @@ export default async function handler(req, res) {
         return res.status(401).json({ success: false, message: 'Nevažeći token' });
       }
 
-      // Ukloni passwordHash pre slanja podataka
       const sanitizedUsers = users.map(u => ({
         username: u.username,
         status: u.status,
         registeredAt: u.registeredAt,
         lastIP: u.lastIP,
         ipHistory: u.ipHistory,
-        isAdmin: u.isAdmin
+        isAdmin: u.isAdmin,
+        lastAccess: u.lastAccess // Dodato
       }));
 
       return res.status(200).json({ success: true, users: sanitizedUsers });
