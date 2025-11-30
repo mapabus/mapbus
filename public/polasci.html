@@ -292,6 +292,57 @@
                 font-size: 16px;
             }
         }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 20px 50px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            font-size: 1.3em;
+            font-weight: 600;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            min-width: 250px;
+            position: relative;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+            background: #f8f9ff;
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-admin {
+            background: #2c3e50;
+            color: white;
+            display: none;
+        }
+
+        .btn-admin:hover {
+            background: #34495e;
+        }
+
+        .btn-admin.has-pending {
+            background: #e74c3c;
+            animation: pulse 2s infinite;
+        }
+
+        .btn-admin.has-pending:hover {
+            background: #c0392b;
+        }
     </style>
 </head>
 <body>
