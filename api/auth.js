@@ -26,35 +26,71 @@ export default async function handler(req, res) {
     req.method === 'POST' ? req.body : req.query;
 
   try {
-    // Učitaj korisnike
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${USERS_SHEET}!A:F`,
-    });
-
-    const rows = response.data.values || [];
+    let users = [];
     
-    // Ako sheet ne postoji ili je prazan, inicijalizuj ga
-    if (rows.length === 0) {
-      await sheets.spreadsheets.values.update({
+    try {
+      // Pokušaj da učitaš korisnike
+      const response = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USERS_SHEET}!A1:F1`,
-        valueInputOption: 'RAW',
-        resource: {
-          values: [['Username', 'Password', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory']]
-        }
+        range: `${USERS_SHEET}!A:G`,
       });
+
+      const rows = response.data.values || [];
       
-      var users = [];
-    } else {
-      var users = rows.slice(1).map(row => ({
-        username: row[0] || '',
-        password: row[1] || '',
-        status: row[2] || 'pending',
-        registeredAt: row[3] || '',
-        lastIP: row[4] || '',
-        ipHistory: row[5] || '',
-      }));
+      // Ako sheet postoji ali je prazan, dodaj header
+      if (rows.length === 0) {
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${USERS_SHEET}!A1:G1`,
+          valueInputOption: 'RAW',
+          resource: {
+            values: [['Username', 'Password', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory', 'IsAdmin']]
+          }
+        });
+      } else {
+        users = rows.slice(1).map(row => ({
+          username: row[0] || '',
+          password: row[1] || '',
+          status: row[2] || 'pending',
+          registeredAt: row[3] || '',
+          lastIP: row[4] || '',
+          ipHistory: row[5] || '',
+          isAdmin: row[6] === 'true' || row[6] === 'TRUE' || false,
+        }));
+      }
+    } catch (error) {
+      // Ako sheet ne postoji, kreiraj ga
+      if (error.message && error.message.includes('Unable to parse range')) {
+        console.log('Creating Users sheet...');
+        
+        // Kreiraj novi sheet
+        await sheets.spreadsheets.batchUpdate({
+          spreadsheetId: SPREADSHEET_ID,
+          resource: {
+            requests: [{
+              addSheet: {
+                properties: {
+                  title: USERS_SHEET
+                }
+              }
+            }]
+          }
+        });
+        
+        // Dodaj header
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${USERS_SHEET}!A1:G1`,
+          valueInputOption: 'RAW',
+          resource: {
+            values: [['Username', 'Password', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory', 'IsAdmin']]
+          }
+        });
+        
+        console.log('Users sheet created successfully');
+      } else {
+        throw error;
+      }
     }
 
     const ip = req.headers['x-forwarded-for']?.split(',')[0] || 
@@ -86,10 +122,10 @@ export default async function handler(req, res) {
 
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USERS_SHEET}!A:F`,
+        range: `${USERS_SHEET}!A:G`,
         valueInputOption: 'RAW',
         resource: {
-          values: [[username, password, 'pending', now, ip, ip]]
+          values: [[username, password, 'pending', now, ip, ip, 'false']]
         }
       });
 
@@ -138,7 +174,8 @@ export default async function handler(req, res) {
         success: true, 
         message: 'Uspešna prijava',
         token: token,
-        username: username
+        username: username,
+        isAdmin: user.isAdmin
       });
     }
 
@@ -164,7 +201,7 @@ export default async function handler(req, res) {
           return res.status(401).json({ success: false, message: 'Token je istekao' });
         }
 
-        return res.status(200).json({ success: true, username: tokenUsername });
+        return res.status(200).json({ success: true, username: tokenUsername, isAdmin: user.isAdmin });
       } catch (e) {
         return res.status(401).json({ success: false, message: 'Nevažeći token' });
       }
@@ -172,11 +209,44 @@ export default async function handler(req, res) {
 
     // ====== LISTA KORISNIKA (za admin) ======
     if (action === 'listUsers') {
+      // Proveri da li je korisnik admin
+      if (!token) {
+        return res.status(401).json({ success: false, message: 'Neautorizovan pristup' });
+      }
+
+      try {
+        const decoded = Buffer.from(token, 'base64').toString('utf-8');
+        const [tokenUsername] = decoded.split(':');
+        const requestUser = users.find(u => u.username === tokenUsername);
+        
+        if (!requestUser || !requestUser.isAdmin) {
+          return res.status(403).json({ success: false, message: 'Nemate admin privilegije' });
+        }
+      } catch (e) {
+        return res.status(401).json({ success: false, message: 'Nevažeći token' });
+      }
+
       return res.status(200).json({ success: true, users: users });
     }
 
     // ====== AŽURIRANJE STATUSA (za admin) ======
     if (action === 'updateStatus') {
+      // Proveri da li je korisnik admin
+      if (!token) {
+        return res.status(401).json({ success: false, message: 'Neautorizovan pristup' });
+      }
+
+      try {
+        const decoded = Buffer.from(token, 'base64').toString('utf-8');
+        const [tokenUsername] = decoded.split(':');
+        const requestUser = users.find(u => u.username === tokenUsername);
+        
+        if (!requestUser || !requestUser.isAdmin) {
+          return res.status(403).json({ success: false, message: 'Nemate admin privilegije' });
+        }
+      } catch (e) {
+        return res.status(401).json({ success: false, message: 'Nevažeći token' });
+      }
       if (!userIndex || !status) {
         return res.status(400).json({ 
           success: false, 
