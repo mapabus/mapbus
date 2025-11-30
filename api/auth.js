@@ -22,14 +22,14 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const { action, username, password, email, token, userIndex, status } = 
+  const { action, username, password, token, userIndex, status, captcha } = 
     req.method === 'POST' ? req.body : req.query;
 
   try {
     // Učitaj korisnike
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${USERS_SHEET}!A:G`,
+      range: `${USERS_SHEET}!A:F`,
     });
 
     const rows = response.data.values || [];
@@ -38,23 +38,22 @@ export default async function handler(req, res) {
     if (rows.length === 0) {
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USERS_SHEET}!A1:G1`,
+        range: `${USERS_SHEET}!A1:F1`,
         valueInputOption: 'RAW',
         resource: {
-          values: [['Username', 'Password', 'Email', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory']]
+          values: [['Username', 'Password', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory']]
         }
       });
       
-      const users = [];
+      var users = [];
     } else {
       var users = rows.slice(1).map(row => ({
         username: row[0] || '',
         password: row[1] || '',
-        email: row[2] || '',
-        status: row[3] || 'pending',
-        registeredAt: row[4] || '',
-        lastIP: row[5] || '',
-        ipHistory: row[6] || '',
+        status: row[2] || 'pending',
+        registeredAt: row[3] || '',
+        lastIP: row[4] || '',
+        ipHistory: row[5] || '',
       }));
     }
 
@@ -64,15 +63,22 @@ export default async function handler(req, res) {
 
     // ====== REGISTRACIJA ======
     if (action === 'register') {
+      // Proveri CAPTCHA
+      if (!captcha || captcha.trim() === '') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Molimo potvrdite da niste robot' 
+        });
+      }
+
       const existingUser = users.find(u => 
-        u.username.toLowerCase() === username.toLowerCase() || 
-        u.email.toLowerCase() === email.toLowerCase()
+        u.username.toLowerCase() === username.toLowerCase()
       );
 
       if (existingUser) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Korisničko ime ili email već postoji' 
+          message: 'Korisničko ime već postoji' 
         });
       }
 
@@ -80,10 +86,10 @@ export default async function handler(req, res) {
 
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USERS_SHEET}!A:G`,
+        range: `${USERS_SHEET}!A:F`,
         valueInputOption: 'RAW',
         resource: {
-          values: [[username, password, email, 'pending', now, ip, ip]]
+          values: [[username, password, 'pending', now, ip, ip]]
         }
       });
 
@@ -119,7 +125,7 @@ export default async function handler(req, res) {
 
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USERS_SHEET}!F${userIndex + 2}:G${userIndex + 2}`,
+        range: `${USERS_SHEET}!E${userIndex + 2}:F${userIndex + 2}`,
         valueInputOption: 'RAW',
         resource: {
           values: [[ip, ipHistory]]
@@ -180,7 +186,7 @@ export default async function handler(req, res) {
 
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USERS_SHEET}!D${userIndex}`,
+        range: `${USERS_SHEET}!C${userIndex}`,
         valueInputOption: 'RAW',
         resource: {
           values: [[status]]
