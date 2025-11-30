@@ -1,4 +1,15 @@
 import { google } from 'googleapis';
+import crypto from 'crypto';
+
+// Funkcija za heširanje lozinke
+function hashPassword(password) {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+// Funkcija za verifikaciju lozinke
+function verifyPassword(password, hashedPassword) {
+  return hashPassword(password) === hashedPassword;
+}
 
 // Google Sheets setup
 const auth = new google.auth.GoogleAuth({
@@ -29,7 +40,6 @@ export default async function handler(req, res) {
     let users = [];
     
     try {
-      // Pokušaj da učitaš korisnike
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
         range: `${USERS_SHEET}!A:G`,
@@ -37,20 +47,19 @@ export default async function handler(req, res) {
 
       const rows = response.data.values || [];
       
-      // Ako sheet postoji ali je prazan, dodaj header
       if (rows.length === 0) {
         await sheets.spreadsheets.values.update({
           spreadsheetId: SPREADSHEET_ID,
           range: `${USERS_SHEET}!A1:G1`,
           valueInputOption: 'RAW',
           resource: {
-            values: [['Username', 'Password', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory', 'IsAdmin']]
+            values: [['Username', 'PasswordHash', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory', 'IsAdmin']]
           }
         });
       } else {
         users = rows.slice(1).map(row => ({
           username: row[0] || '',
-          password: row[1] || '',
+          passwordHash: row[1] || '', // Sada je heš umesto plain-text
           status: row[2] || 'pending',
           registeredAt: row[3] || '',
           lastIP: row[4] || '',
@@ -59,11 +68,9 @@ export default async function handler(req, res) {
         }));
       }
     } catch (error) {
-      // Ako sheet ne postoji, kreiraj ga
       if (error.message && error.message.includes('Unable to parse range')) {
         console.log('Creating Users sheet...');
         
-        // Kreiraj novi sheet
         await sheets.spreadsheets.batchUpdate({
           spreadsheetId: SPREADSHEET_ID,
           resource: {
@@ -77,13 +84,12 @@ export default async function handler(req, res) {
           }
         });
         
-        // Dodaj header
         await sheets.spreadsheets.values.update({
           spreadsheetId: SPREADSHEET_ID,
           range: `${USERS_SHEET}!A1:G1`,
           valueInputOption: 'RAW',
           resource: {
-            values: [['Username', 'Password', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory', 'IsAdmin']]
+            values: [['Username', 'PasswordHash', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory', 'IsAdmin']]
           }
         });
         
@@ -99,7 +105,6 @@ export default async function handler(req, res) {
 
     // ====== REGISTRACIJA ======
     if (action === 'register') {
-      // Proveri CAPTCHA
       if (!captcha || captcha.trim() === '') {
         return res.status(400).json({ 
           success: false, 
@@ -119,13 +124,14 @@ export default async function handler(req, res) {
       }
 
       const now = new Date().toLocaleString('sr-RS', { timeZone: 'Europe/Belgrade' });
+      const hashedPassword = hashPassword(password); // Heširaj lozinku
 
       await sheets.spreadsheets.values.append({
         spreadsheetId: SPREADSHEET_ID,
         range: `${USERS_SHEET}!A:G`,
         valueInputOption: 'RAW',
         resource: {
-          values: [[username, password, 'pending', now, ip, ip, 'false']]
+          values: [[username, hashedPassword, 'pending', now, ip, ip, 'false']]
         }
       });
 
@@ -137,11 +143,17 @@ export default async function handler(req, res) {
 
     // ====== LOGIN ======
     if (action === 'login') {
-      const user = users.find(u => 
-        u.username === username && u.password === password
-      );
+      const user = users.find(u => u.username === username);
 
       if (!user) {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Pogrešno korisničko ime ili lozinka' 
+        });
+      }
+
+      // Verifikuj lozinku koristeći heš
+      if (!verifyPassword(password, user.passwordHash)) {
         return res.status(401).json({ 
           success: false, 
           message: 'Pogrešno korisničko ime ili lozinka' 
@@ -195,7 +207,6 @@ export default async function handler(req, res) {
           return res.status(401).json({ success: false, message: 'Nevažeći token' });
         }
 
-        // Token važi 7 dana
         const tokenAge = Date.now() - parseInt(timestamp);
         if (tokenAge > 7 * 24 * 60 * 60 * 1000) {
           return res.status(401).json({ success: false, message: 'Token je istekao' });
@@ -209,7 +220,6 @@ export default async function handler(req, res) {
 
     // ====== LISTA KORISNIKA (za admin) ======
     if (action === 'listUsers') {
-      // Proveri da li je korisnik admin
       if (!token) {
         return res.status(401).json({ success: false, message: 'Neautorizovan pristup' });
       }
@@ -226,12 +236,21 @@ export default async function handler(req, res) {
         return res.status(401).json({ success: false, message: 'Nevažeći token' });
       }
 
-      return res.status(200).json({ success: true, users: users });
+      // Ukloni passwordHash pre slanja podataka
+      const sanitizedUsers = users.map(u => ({
+        username: u.username,
+        status: u.status,
+        registeredAt: u.registeredAt,
+        lastIP: u.lastIP,
+        ipHistory: u.ipHistory,
+        isAdmin: u.isAdmin
+      }));
+
+      return res.status(200).json({ success: true, users: sanitizedUsers });
     }
 
     // ====== AŽURIRANJE STATUSA (za admin) ======
     if (action === 'updateStatus') {
-      // Proveri da li je korisnik admin
       if (!token) {
         return res.status(401).json({ success: false, message: 'Neautorizovan pristup' });
       }
@@ -247,6 +266,7 @@ export default async function handler(req, res) {
       } catch (e) {
         return res.status(401).json({ success: false, message: 'Nevažeći token' });
       }
+
       if (!userIndex || !status) {
         return res.status(400).json({ 
           success: false, 
