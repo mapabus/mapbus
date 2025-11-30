@@ -20,7 +20,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1600px;
             margin: 0 auto;
         }
 
@@ -86,6 +86,7 @@
             text-align: left;
             font-weight: 600;
             font-size: 13px;
+            white-space: nowrap;
         }
 
         td {
@@ -150,12 +151,144 @@
         }
 
         .ip-list {
+            font-size: 12px;
+            color: #1e3c72;
+            cursor: pointer;
+            text-decoration: underline;
+            font-weight: 600;
+        }
+
+        .ip-list:hover {
+            color: #2a5298;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1e3c72;
+        }
+
+        .modal-close {
+            background: #dc3545;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .modal-close:hover {
+            background: #c82333;
+        }
+
+        .ip-history-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .ip-history-item {
+            padding: 12px 15px;
+            background: #f8f9fa;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .ip-history-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .ip-address {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e3c72;
+        }
+
+        .ip-badge {
+            background: #1e3c72;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
             font-size: 11px;
+            font-weight: 600;
+        }
+
+        .ip-badge.current {
+            background: #28a745;
+        }
+
+        .last-access {
+            font-size: 12px;
             color: #666;
-            max-width: 300px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+        }
+
+        .access-recent {
+            color: #28a745;
+            font-weight: 600;
+        }
+
+        .access-old {
+            color: #dc3545;
+        }
+
+        .access-never {
+            color: #999;
+            font-style: italic;
+        }
+
+        @media (max-width: 1200px) {
+            table {
+                font-size: 12px;
+            }
+            
+            th, td {
+                padding: 10px 8px;
+            }
         }
     </style>
 </head>
@@ -178,6 +311,10 @@
                 <div class="stat-number" id="approvedUsers">0</div>
                 <div class="stat-label">Odobreno</div>
             </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeUsers">0</div>
+                <div class="stat-label">Aktivnih danas</div>
+            </div>
         </div>
 
         <div class="table-container">
@@ -189,20 +326,33 @@
                         <th>Registrovan</th>
                         <th>Poslednja IP</th>
                         <th>IP Istorija</th>
+                        <th>Poslednji pristup</th>
                         <th>Akcije</th>
                     </tr>
                 </thead>
                 <tbody id="usersTable">
                     <tr>
-                        <td colspan="6" class="loading">Učitavanje...</td>
+                        <td colspan="7" class="loading">Učitavanje...</td>
                     </tr>
                 </tbody>
             </table>
         </div>
     </div>
 
+    <!-- Modal za prikaz IP istorije -->
+    <div id="ipModal" class="modal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <span class="modal-title" id="modalTitle">IP Istorija</span>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <ul class="ip-history-list" id="ipHistoryList">
+                <!-- Dinamički se popunjava -->
+            </ul>
+        </div>
+    </div>
+
     <script>
-        // Proveri admin status pri učitavanju
         window.addEventListener('load', async function() {
             const token = localStorage.getItem('authToken');
             
@@ -212,7 +362,6 @@
                 return;
             }
 
-            // Verifikuj da li je korisnik admin
             try {
                 const response = await fetch('/api/auth', {
                     method: 'POST',
@@ -231,7 +380,6 @@
                     return;
                 }
 
-                // Admin je verifikovan, učitaj korisnike
                 loadUsers();
             } catch (error) {
                 alert('Greška pri verifikaciji!');
@@ -259,20 +407,62 @@
                     updateStats(data.users);
                 } else {
                     document.getElementById('usersTable').innerHTML = 
-                        '<tr><td colspan="6" style="text-align:center; color:#dc3545;">' + data.message + '</td></tr>';
+                        '<tr><td colspan="7" style="text-align:center; color:#dc3545;">' + data.message + '</td></tr>';
                 }
             } catch (error) {
                 console.error('Error:', error);
                 document.getElementById('usersTable').innerHTML = 
-                    '<tr><td colspan="6" style="text-align:center; color:#dc3545;">Greška pri povezivanju</td></tr>';
+                    '<tr><td colspan="7" style="text-align:center; color:#dc3545;">Greška pri povezivanju</td></tr>';
             }
+        }
+
+        function formatLastAccess(lastAccess) {
+            if (!lastAccess) {
+                return '<span class="last-access access-never">Nikad</span>';
+            }
+
+            // Parsiranje datuma (format: "30.11.2025. 14:30:15")
+            const parts = lastAccess.split(' ');
+            const datePart = parts[0]; // "30.11.2025."
+            const timePart = parts[1]; // "14:30:15"
+            
+            const [day, month, year] = datePart.replace('.', '').split('.');
+            const [hour, minute, second] = timePart.split(':');
+            
+            const accessDate = new Date(year, month - 1, day, hour, minute, second);
+            const now = new Date();
+            const diffMs = now - accessDate;
+            const diffMinutes = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMinutes / 60);
+            const diffDays = Math.floor(diffHours / 24);
+
+            let displayText = lastAccess;
+            let className = 'last-access';
+
+            if (diffMinutes < 5) {
+                displayText = 'Upravo sad';
+                className += ' access-recent';
+            } else if (diffMinutes < 60) {
+                displayText = `Pre ${diffMinutes} min`;
+                className += ' access-recent';
+            } else if (diffHours < 24) {
+                displayText = `Pre ${diffHours}h`;
+                className += ' access-recent';
+            } else if (diffDays === 1) {
+                displayText = 'Juče';
+            } else if (diffDays > 7) {
+                displayText = lastAccess;
+                className += ' access-old';
+            }
+
+            return `<span class="${className}" title="${lastAccess}">${displayText}</span>`;
         }
 
         function displayUsers(users) {
             const tbody = document.getElementById('usersTable');
             
             if (users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Nema korisnika</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Nema korisnika</td></tr>';
                 return;
             }
 
@@ -299,7 +489,12 @@
                         <td><span class="status-badge ${statusClass}">${user.status.toUpperCase()}</span></td>
                         <td>${user.registeredAt}</td>
                         <td>${user.lastIP}</td>
-                        <td><span class="ip-list" title="${user.ipHistory}">${user.ipHistory}</span></td>
+                        <td>
+                            <span class="ip-list" onclick="showIPHistory('${user.username}', '${user.lastIP}', '${user.ipHistory}')">
+                                📋 Prikaži istoriju
+                            </span>
+                        </td>
+                        <td>${formatLastAccess(user.lastAccess)}</td>
                         <td>${actions}</td>
                     </tr>
                 `;
@@ -310,10 +505,29 @@
             const total = users.length;
             const pending = users.filter(u => u.status === 'pending').length;
             const approved = users.filter(u => u.status === 'approved').length;
+            
+            // Računa aktivne korisnike (pristupili u poslednjih 24h)
+            const now = new Date();
+            const active = users.filter(u => {
+                if (!u.lastAccess) return false;
+                
+                const parts = u.lastAccess.split(' ');
+                const datePart = parts[0];
+                const timePart = parts[1];
+                
+                const [day, month, year] = datePart.replace('.', '').split('.');
+                const [hour, minute, second] = timePart.split(':');
+                
+                const accessDate = new Date(year, month - 1, day, hour, minute, second);
+                const diffHours = (now - accessDate) / (1000 * 60 * 60);
+                
+                return diffHours < 24;
+            }).length;
 
             document.getElementById('totalUsers').textContent = total;
             document.getElementById('pendingUsers').textContent = pending;
             document.getElementById('approvedUsers').textContent = approved;
+            document.getElementById('activeUsers').textContent = active;
         }
 
         async function updateStatus(userIndex, newStatus) {
@@ -347,6 +561,59 @@
                 alert('Greška pri povezivanju sa serverom');
             }
         }
+
+        function showIPHistory(username, currentIP, ipHistory) {
+            const modal = document.getElementById('ipModal');
+            const title = document.getElementById('modalTitle');
+            const list = document.getElementById('ipHistoryList');
+
+            title.textContent = `IP Istorija - ${username}`;
+
+            // Parsiranje IP adresa
+            const ips = ipHistory.split(',').map(ip => ip.trim()).filter(ip => ip);
+            
+            // Ukloni duplikate ali zadrži redosled
+            const uniqueIPs = [];
+            const seen = new Set();
+            
+            for (let i = ips.length - 1; i >= 0; i--) {
+                if (!seen.has(ips[i])) {
+                    uniqueIPs.push(ips[i]);
+                    seen.add(ips[i]);
+                }
+            }
+
+            // Prikaži liste
+            list.innerHTML = uniqueIPs.map((ip, index) => {
+                const isCurrent = ip === currentIP;
+                const badge = isCurrent 
+                    ? '<span class="ip-badge current">Trenutna</span>' 
+                    : index === 0 
+                        ? '<span class="ip-badge">Najnovija</span>'
+                        : `<span class="ip-badge">#${uniqueIPs.length - index}</span>`;
+                
+                return `
+                    <li class="ip-history-item">
+                        <span class="ip-address">${ip}</span>
+                        ${badge}
+                    </li>
+                `;
+            }).join('');
+
+            modal.classList.add('show');
+        }
+
+        function closeModal(event) {
+            const modal = document.getElementById('ipModal');
+            modal.classList.remove('show');
+        }
+
+        // Zatvori modal sa ESC tasterom
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
     </script>
 </body>
 </html>
