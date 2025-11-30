@@ -280,12 +280,12 @@
             }
 
             try {
-                const response = await fetch('/api/admin-users', {
+                const response = await fetch('/api/auth', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         action: 'updateStatus',
-                        userIndex: userIndex + 2, // +2 jer sheet ima header
+                        userIndex: userIndex + 2,
                         status: newStatus
                     })
                 });
