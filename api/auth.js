@@ -153,7 +153,20 @@ export default async function handler(req, res) {
         });
       }
 
-      if (!verifyPassword(password, user.passwordHash)) {
+      // Proveri da li je lozinka hešovana ili plain text (za migraciju starih naloga)
+      let isPasswordValid = false;
+      let needsMigration = false;
+
+      if (verifyPassword(password, user.passwordHash)) {
+        // Lozinka je već hešovana i tačna
+        isPasswordValid = true;
+      } else if (user.passwordHash === password) {
+        // Stara plain text lozinka - treba migrirati
+        isPasswordValid = true;
+        needsMigration = true;
+      }
+
+      if (!isPasswordValid) {
         return res.status(401).json({ 
           success: false, 
           message: 'Pogrešno korisničko ime ili lozinka' 
@@ -172,14 +185,21 @@ export default async function handler(req, res) {
       const ipHistory = user.ipHistory ? `${user.ipHistory}, ${ip}` : ip;
       const now = new Date().toLocaleString('sr-RS', { timeZone: 'Europe/Belgrade' });
 
+      // Ako je potrebna migracija, hešuj lozinku
+      const passwordToStore = needsMigration ? hashPassword(password) : user.passwordHash;
+
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${USERS_SHEET}!E${userIndex + 2}:H${userIndex + 2}`,
+        range: `${USERS_SHEET}!B${userIndex + 2}:H${userIndex + 2}`,
         valueInputOption: 'RAW',
         resource: {
-          values: [[ip, ipHistory, user.isAdmin ? 'true' : 'false', now]] // Dodato LastAccess
+          values: [[passwordToStore, user.status, user.registeredAt, ip, ipHistory, user.isAdmin ? 'true' : 'false', now]]
         }
       });
+
+      if (needsMigration) {
+        console.log(`✓ Migrated password for user: ${username}`);
+      }
 
       const token = Buffer.from(`${username}:${Date.now()}`).toString('base64');
 
