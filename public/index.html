@@ -278,16 +278,50 @@
             }
         }
 
-        // Proveri admin status kada se stranica učita
-        window.addEventListener('load', checkAdminStatus);
+        // Globalna promenljiva za praćenje admin statusa
+        let isAdmin = false;
 
-        // Periodično proveri pending korisnike (svakih 30 sekundi)
-        setInterval(() => {
+        // Proveri admin status i pokreni auto-refresh ako je admin
+        async function initializeAdminFeatures() {
             const token = localStorage.getItem('authToken');
-            if (token) {
-                checkPendingUsers(token);
+            
+            if (!token) return;
+
+            try {
+                const response = await fetch('/api/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        action: 'verify', 
+                        token: token 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.isAdmin) {
+                    isAdmin = true;
+                    // Prikaži admin dugme
+                    document.getElementById('adminBtn').style.display = 'inline-block';
+                    
+                    // Prva provera pending korisnika
+                    await checkPendingUsers(token);
+                    
+                    // Pokreni auto-refresh svakih 30 sekundi samo za admine
+                    setInterval(async () => {
+                        const currentToken = localStorage.getItem('authToken');
+                        if (currentToken && isAdmin) {
+                            await checkPendingUsers(currentToken);
+                        }
+                    }, 30000);
+                }
+            } catch (error) {
+                console.error('Error initializing admin features:', error);
             }
-        }, 30000);
+        }
+
+        // Pokreni admin features kada se stranica učita
+        window.addEventListener('load', initializeAdminFeatures);
     </script>
 </body>
 </html>
