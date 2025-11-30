@@ -9,9 +9,13 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  // ===== GET za čitanje podataka iz Polasci sheet-a =====
+  // ===== GET za čitanje podataka =====
   if (req.method === 'GET') {
-    console.log('=== Reading Polasci Sheet ===');
+    // Proveri da li se traže jučerašnji podaci
+    const isYesterdayRequest = req.query.yesterday === 'true';
+    const sheetName = isYesterdayRequest ? 'Juce' : 'Polasci';
+    
+    console.log(`=== Reading ${sheetName} Sheet ===`);
     
     try {
       const auth = new google.auth.GoogleAuth({
@@ -24,7 +28,6 @@ export default async function handler(req, res) {
 
       const sheets = google.sheets({ version: 'v4', auth });
       const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
-      const sheetName = 'Polasci';
 
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId,
@@ -70,7 +73,8 @@ export default async function handler(req, res) {
       return res.status(200).json({
         success: true,
         routes: routes,
-        totalRoutes: routes.length
+        totalRoutes: routes.length,
+        sheetName: sheetName
       });
 
     } catch (error) {
@@ -148,27 +152,22 @@ export default async function handler(req, res) {
       const polazak = row[2] || '';
       const smer = row[3] || '';
       const timestamp = row[4] || '';
-      const datumFull = row[5] || ''; // Ovo sadrži "30.11.2025. 10:36:26"
+      const datumFull = row[5] || '';
 
       if (!linija || !polazak || !smer) return;
 
-      // Izvuci samo datum deo (pre prvog razmaka ili cele ako nema razmaka)
       const datum = datumFull.split(' ')[0].trim();
       
-      // Proveri da li je vozilo viđeno danas
       if (datum !== todayDate) {
         skippedOld++;
         return;
       }
       
-      // Proveri da li je polazak u budućnosti
-      // Format polaska je "HH:MM:SS" ili "HH:MM"
       const polazakParts = polazak.split(':');
       const polazakHour = parseInt(polazakParts[0]) || 0;
       const polazakMinute = parseInt(polazakParts[1]) || 0;
       const polazakTimeInMinutes = polazakHour * 60 + polazakMinute;
       
-      // Ako je polazak u budućnosti, preskoči
       if (polazakTimeInMinutes > currentTimeInMinutes) {
         skippedFuture++;
         return;
@@ -297,17 +296,14 @@ export default async function handler(req, res) {
       const directions = routeMap[route];
       
       if (!routeStructure.has(route)) {
-        // Nova linija
         routeStructure.set(route, new Map());
       }
       
       for (let direction in directions) {
         if (!routeStructure.get(route).has(direction)) {
-          // Novi smer
           routeStructure.get(route).set(direction, []);
         }
         
-        // Dodaj/ažuriraj polaske
         const departures = directions[direction];
         const existingDepartures = routeStructure.get(route).get(direction);
         
@@ -315,7 +311,6 @@ export default async function handler(req, res) {
           const key = `${route}|${direction}|${dep.startTime}|${dep.vehicleLabel}`;
           
           if (existingDeparturesMap.has(key)) {
-            // Ažuriraj timestamp postojećeg polaska
             const existing = existingDeparturesMap.get(key);
             const index = existingDepartures.findIndex(
               d => d.startTime === dep.startTime && d.vehicleLabel === dep.vehicleLabel
@@ -325,13 +320,11 @@ export default async function handler(req, res) {
               updatedCount++;
             }
           } else {
-            // Dodaj novi polazak
             existingDepartures.push(dep);
             newCount++;
           }
         });
         
-        // Sortiraj polaske po vremenu
         existingDepartures.sort((a, b) => a.startTime.localeCompare(b.startTime));
       }
     }
@@ -343,7 +336,6 @@ export default async function handler(req, res) {
     const formatRequests = [];
     let currentRow = 0;
 
-    // Sortiraj linije numerički
     const sortedRoutes = Array.from(routeStructure.keys()).sort((a, b) => {
       const numA = parseInt(a.replace(/\D/g, '')) || 0;
       const numB = parseInt(b.replace(/\D/g, '')) || 0;
@@ -351,7 +343,6 @@ export default async function handler(req, res) {
     });
 
     for (let route of sortedRoutes) {
-      // Red za liniju
       allRows.push([`Linija ${route}`, '', '', '', '', '', '', '', '', '']);
       formatRequests.push({
         repeatCell: {
@@ -381,7 +372,6 @@ export default async function handler(req, res) {
       const sortedDirections = Array.from(directions.keys()).sort();
 
       for (let direction of sortedDirections) {
-        // Red za smer
         allRows.push([`Smer: ${direction}`, '', '', '', '', '', '', '', '', '']);
         formatRequests.push({
           repeatCell: {
@@ -407,7 +397,6 @@ export default async function handler(req, res) {
         });
         currentRow++;
 
-        // Red za header
         allRows.push(['Polazak', 'Vozilo', 'Poslednji put viđen', '', '', '', '', '', '', '']);
         formatRequests.push({
           repeatCell: {
@@ -429,24 +418,20 @@ export default async function handler(req, res) {
         });
         currentRow++;
 
-        // Redovi za polaske (već sortirani)
         const departures = directions.get(direction);
         departures.forEach(dep => {
           allRows.push([dep.startTime, dep.vehicleLabel, dep.timestamp, '', '', '', '', '', '', '']);
           currentRow++;
         });
 
-        // Prazan red posle smera
         allRows.push(['', '', '', '', '', '', '', '', '', '']);
         currentRow++;
       }
 
-      // Prazan red posle linije
       allRows.push(['', '', '', '', '', '', '', '', '', '']);
       currentRow++;
     }
 
-    // Obriši postojeće podatke i upiši nove
     await sheets.spreadsheets.values.clear({
       spreadsheetId,
       range: `${sheetName}!A:J`
@@ -460,7 +445,6 @@ export default async function handler(req, res) {
     });
     console.log(`✓ Wrote ${allRows.length} rows to sheet`);
 
-    // Primeni formatiranje
     if (formatRequests.length > 0) {
       await sheets.spreadsheets.batchUpdate({
         spreadsheetId,
