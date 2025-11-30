@@ -131,7 +131,6 @@ export default async function handler(req, res) {
     });
 
     console.log(`Today's date: ${todayDate}`);
-    console.log(`Sample dates from Baza:`, bazaRows.slice(0, 3).map(r => r[5]));
 
     // Grupisanje po linijama i smerovima - samo današnja vozila
     const routeMap = {};
@@ -144,18 +143,15 @@ export default async function handler(req, res) {
       const polazak = row[2] || '';
       const smer = row[3] || '';
       const timestamp = row[4] || '';
-      const datum = row[5] || '';
+      const datumFull = row[5] || ''; // Ovo sadrži "30.11.2025. 10:36:26"
 
       if (!linija || !polazak || !smer) return;
 
-      // Proveri da li je vozilo viđeno danas - fleksibilno poređenje
-      // Ukloni razmake i poređaj samo datum deo
-      const cleanDatum = datum.trim();
-      const cleanToday = todayDate.trim();
+      // Izvuci samo datum deo (pre prvog razmaka ili cele ako nema razmaka)
+      const datum = datumFull.split(' ')[0].trim();
       
-      console.log(`Comparing: "${cleanDatum}" vs "${cleanToday}"`);
-      
-      if (cleanDatum !== cleanToday) {
+      // Proveri da li je vozilo viđeno danas
+      if (datum !== todayDate) {
         skippedOld++;
         return;
       }
