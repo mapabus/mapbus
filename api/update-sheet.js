@@ -2,120 +2,18 @@ import { google } from 'googleapis';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  // ===== GET za čitanje podataka =====
-  if (req.method === 'GET') {
-    console.log('=== Departures Sheet Read Request ===');
-    
-    try {
-      const clientEmail = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
-      const privateKey = process.env.GOOGLE_SHEETS_PRIVATE_KEY;
-      const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
-
-      if (!clientEmail || !privateKey || !spreadsheetId) {
-        return res.status(500).json({ 
-          error: 'Missing environment variables'
-        });
-      }
-
-      let formattedPrivateKey = privateKey;
-      if (privateKey.includes('\\n')) {
-        formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
-      }
-
-      const auth = new google.auth.GoogleAuth({
-        credentials: {
-          client_email: clientEmail,
-          private_key: formattedPrivateKey,
-        },
-        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-      });
-
-      const sheets = google.sheets({ version: 'v4', auth });
-      const sheetName = 'Polasci';
-
-      const response = await sheets.spreadsheets.values.get({
-        spreadsheetId,
-        range: `${sheetName}!A1:J`,
-      });
-
-      const rows = response.data.values || [];
-      console.log(`Read ${rows.length} rows from sheet`);
-
-      const routes = [];
-      let currentRoute = null;
-      let currentDirection = null;
-
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        
-        if (!row[0]) continue;
-        
-        if (row[0].startsWith('Linija ')) {
-          if (currentRoute) {
-            routes.push(currentRoute);
-          }
-          
-          currentRoute = {
-            routeName: row[0].replace('Linija ', '').trim(),
-            directions: []
-          };
-          currentDirection = null;
-        }
-        else if (row[0].startsWith('Smer: ')) {
-          if (currentRoute) {
-            currentDirection = {
-              directionName: row[0].replace('Smer: ', '').trim(),
-              departures: []
-            };
-            currentRoute.directions.push(currentDirection);
-          }
-        }
-        else if (row[0] === 'Polazak') {
-          continue;
-        }
-        else if (currentDirection && row[0] && row[0].match(/^\d{1,2}:\d{2}/)) {
-          currentDirection.departures.push({
-            startTime: row[0],
-            vehicleLabel: row[1] || '',
-            timestamp: row[2] || ''
-          });
-        }
-      }
-
-      if (currentRoute) {
-        routes.push(currentRoute);
-      }
-
-      console.log(`Parsed ${routes.length} routes`);
-
-      return res.status(200).json({
-        success: true,
-        routes: routes,
-        totalRoutes: routes.length
-      });
-
-    } catch (error) {
-      console.error('Read error:', error);
-      return res.status(500).json({
-        success: false,
-        error: error.message
-      });
-    }
-  }
-
-  // ===== POST za dodavanje novih podataka (BEZ BRISANJA) =====
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  console.log('=== Departures Sheet Update Request ===');
+  console.log('=== Google Sheets Update Request ===');
   
   try {
     const { vehicles } = req.body;
@@ -125,7 +23,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid data format' });
     }
 
-    console.log(`Received ${vehicles.length} vehicles for departure tracking`);
+    console.log(`Received ${vehicles.length} vehicles`);
 
     const clientEmail = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
     const privateKey = process.env.GOOGLE_SHEETS_PRIVATE_KEY;
@@ -163,45 +61,12 @@ export default async function handler(req, res) {
       second: '2-digit'
     });
 
-    // Grupisanje vozila po linijama
-    const routeMap = {};
-    
-    vehicles.forEach(v => {
-      const route = v.routeDisplayName || v.routeId;
-      const destName = v.destName || 'Unknown';
-      const vehicleLabel = v.vehicleLabel || '';
-      const startTime = v.startTime || 'N/A';
-      
-      if (!routeMap[route]) {
-        routeMap[route] = {};
-      }
-      
-      if (!routeMap[route][destName]) {
-        routeMap[route][destName] = [];
-      }
-      
-      routeMap[route][destName].push({
-        startTime: startTime,
-        vehicleLabel: vehicleLabel,
-        timestamp: timestamp
-      });
-    });
+    // KLJUČNA PROMENA: Uvek koristi sheet "Baza"
+    const sheetName = 'Baza';
+    console.log(`Target sheet: ${sheetName}`);
 
-    // Sortiraj polaske po vremenu
-    for (let route in routeMap) {
-      for (let direction in routeMap[route]) {
-        routeMap[route][direction].sort((a, b) => {
-          return a.startTime.localeCompare(b.startTime);
-        });
-      }
-    }
-
-    console.log(`Grouped into ${Object.keys(routeMap).length} routes`);
-
-    // Proveri/Kreiraj sheet "Polasci"
-    const sheetName = 'Polasci';
+    // Proveri da li sheet postoji, ako ne - kreiraj ga
     let sheetId = null;
-    
     try {
       const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
       const existingSheet = spreadsheet.data.sheets.find(
@@ -210,8 +75,9 @@ export default async function handler(req, res) {
       
       if (existingSheet) {
         sheetId = existingSheet.properties.sheetId;
-        console.log(`✓ Sheet "${sheetName}" exists (ID: ${sheetId})`);
+        console.log(`✓ Sheet "${sheetName}" already exists (ID: ${sheetId})`);
       } else {
+        // Kreiraj sheet "Baza" ako ne postoji
         const addSheetResponse = await sheets.spreadsheets.batchUpdate({
           spreadsheetId,
           resource: {
@@ -220,8 +86,9 @@ export default async function handler(req, res) {
                 properties: {
                   title: sheetName,
                   gridProperties: {
-                    rowCount: 10000,
-                    columnCount: 10
+                    rowCount: 5000,
+                    columnCount: 6,
+                    frozenRowCount: 1
                   }
                 }
               }
@@ -231,6 +98,45 @@ export default async function handler(req, res) {
         
         sheetId = addSheetResponse.data.replies[0].addSheet.properties.sheetId;
         console.log(`✓ Created new sheet "${sheetName}" (ID: ${sheetId})`);
+        
+        // Dodaj header
+        await sheets.spreadsheets.values.update({
+          spreadsheetId,
+          range: `${sheetName}!A1:F1`,
+          valueInputOption: 'RAW',
+          resource: {
+            values: [['Vozilo', 'Linija', 'Polazak', 'Smer', 'Vreme upisa', 'Datum']]
+          }
+        });
+        
+        // Formatiraj header
+        await sheets.spreadsheets.batchUpdate({
+          spreadsheetId,
+          resource: {
+            requests: [{
+              repeatCell: {
+                range: {
+                  sheetId: sheetId,
+                  startRowIndex: 0,
+                  endRowIndex: 1,
+                  startColumnIndex: 0,
+                  endColumnIndex: 6
+                },
+                cell: {
+                  userEnteredFormat: {
+                    backgroundColor: { red: 0.12, green: 0.24, blue: 0.45 },
+                    textFormat: {
+                      foregroundColor: { red: 1, green: 1, blue: 1 },
+                      fontSize: 11,
+                      bold: true
+                    }
+                  }
+                },
+                fields: 'userEnteredFormat(backgroundColor,textFormat)'
+              }
+            }]
+          }
+        });
       }
     } catch (error) {
       console.error('Error checking/creating sheet:', error.message);
@@ -242,183 +148,132 @@ export default async function handler(req, res) {
     try {
       const readResponse = await sheets.spreadsheets.values.get({
         spreadsheetId,
-        range: `${sheetName}!A1:J`,
+        range: `${sheetName}!A2:F`,
       });
       existingData = readResponse.data.values || [];
-      console.log(`Found ${existingData.length} existing rows`);
+      console.log(`Found ${existingData.length} existing rows in ${sheetName}`);
     } catch (readError) {
-      console.log('No existing data');
+      console.log('No existing data:', readError.message);
     }
 
-    // Pronađi postojeće linije i smerove
-    const existingRoutes = new Map();
-    let currentRoute = null;
-    let currentDirection = null;
-    
-    for (let i = 0; i < existingData.length; i++) {
-      const row = existingData[i];
-      if (row[0] && row[0].startsWith('Linija ')) {
-        currentRoute = row[0].replace('Linija ', '');
-        if (!existingRoutes.has(currentRoute)) {
-          existingRoutes.set(currentRoute, {
-            startRow: i,
-            directions: new Map()
-          });
-        }
-        currentDirection = null;
-      } else if (currentRoute && row[0] && row[0].startsWith('Smer: ')) {
-        currentDirection = row[0].replace('Smer: ', '');
-        existingRoutes.get(currentRoute).directions.set(currentDirection, {
-          headerRow: i,
-          departures: new Map()
+    // Kreiraj mapu postojećih vozila
+    const existingVehicles = new Map();
+    existingData.forEach((row, index) => {
+      if (row[0]) {
+        existingVehicles.set(row[0], {
+          rowIndex: index + 2,
+          data: row
         });
-      } else if (currentRoute && currentDirection && row[0] && row[0].match(/^\d{1,2}:\d{2}/)) {
-        const time = row[0];
-        const vehicle = row[1] || '';
-        const key = `${time}_${vehicle}`;
-        const dirData = existingRoutes.get(currentRoute).directions.get(currentDirection);
-        dirData.departures.set(key, i);
       }
-    }
-
-    // Gradi nove podatke za UPDATE
-    let updatedRows = 0;
-    let newRows = 0;
-    const updates = [];
-
-    // Sortiraj linije numerički
-    const sortedRoutes = Object.keys(routeMap).sort((a, b) => {
-      const numA = parseInt(a.replace(/\D/g, '')) || 0;
-      const numB = parseInt(b.replace(/\D/g, '')) || 0;
-      return numA - numB;
     });
 
-    for (let route of sortedRoutes) {
-      const directions = routeMap[route];
-      const existingRoute = existingRoutes.get(route);
-      
-      if (!existingRoute) {
-        // Nova linija - dodaj na kraj
-        const startRow = existingData.length + 1;
-        
-        updates.push({
-          range: `${sheetName}!A${startRow}`,
-          values: [[`Linija ${route}`, '', '', '', '', '', '', '', '', '']]
-        });
-        
-        let rowOffset = 1;
-        
-        const sortedDirections = Object.keys(directions).sort();
-        
-        for (let direction of sortedDirections) {
-          const departures = directions[direction];
-          
-          updates.push({
-            range: `${sheetName}!A${startRow + rowOffset}`,
-            values: [[`Smer: ${direction}`, '', '', '', '', '', '', '', '', '']]
-          });
-          rowOffset++;
-          
-          updates.push({
-            range: `${sheetName}!A${startRow + rowOffset}`,
-            values: [['Polazak', 'Vozilo', 'Poslednji put viđen', '', '', '', '', '', '', '']]
-          });
-          rowOffset++;
-          
-          departures.forEach(dep => {
-            updates.push({
-              range: `${sheetName}!A${startRow + rowOffset}`,
-              values: [[dep.startTime, dep.vehicleLabel, dep.timestamp, '', '', '', '', '', '', '']]
-            });
-            rowOffset++;
-            newRows++;
-          });
-          
-          updates.push({
-            range: `${sheetName}!A${startRow + rowOffset}`,
-            values: [['', '', '', '', '', '', '', '', '', '']]
-          });
-          rowOffset++;
-        }
-        
-        console.log(`✓ Nova linija ${route} - dodato ${rowOffset} redova`);
-        
+    // Obrađuj sva vozila
+    const finalData = [...existingData];
+    let newCount = 0;
+    let updateCount = 0;
+
+    vehicles.forEach(v => {
+      const vehicleLabel = v.vehicleLabel || '';
+      const rowData = [
+        vehicleLabel,
+        v.routeDisplayName || '',
+        v.startTime || '',
+        v.destName || '',
+        timestamp,
+        timestamp.split(',')[0].trim()
+      ];
+
+      if (existingVehicles.has(vehicleLabel)) {
+        // Ažuriraj postojeći red
+        const existingRow = existingVehicles.get(vehicleLabel);
+        const arrayIndex = existingRow.rowIndex - 2;
+        finalData[arrayIndex] = rowData;
+        updateCount++;
       } else {
-        // Postojeća linija - ažuriraj smerove
-        const sortedDirections = Object.keys(directions).sort();
-        
-        for (let direction of sortedDirections) {
-          const departures = directions[direction];
-          const existingDir = existingRoute.directions.get(direction);
-          
-          if (!existingDir) {
-            // Novi smer u postojećoj liniji - dodaj na kraj linije
-            console.log(`✓ Novi smer ${direction} u liniji ${route}`);
-            // Ovde bi trebalo dodati logiku za ubacivanje novog smera
-            // Za sada preskačemo
-            continue;
-          }
-          
-          // Ažuriraj postojeće polaske
-          departures.forEach(dep => {
-            const key = `${dep.startTime}_${dep.vehicleLabel}`;
-            const existingRow = existingDir.departures.get(key);
-            
-            if (existingRow) {
-              // Ažuriraj timestamp postojećeg polaska
-              updates.push({
-                range: `${sheetName}!C${existingRow + 1}`,
-                values: [[dep.timestamp]]
-              });
-              updatedRows++;
-            } else {
-              // Dodaj novi polazak nakon postojećih
-              const lastRow = Math.max(...Array.from(existingDir.departures.values()), existingDir.headerRow);
-              updates.push({
-                range: `${sheetName}!A${lastRow + 2}`,
-                values: [[dep.startTime, dep.vehicleLabel, dep.timestamp, '', '', '', '', '', '', '']]
-              });
-              newRows++;
-            }
-          });
-        }
+        // Dodaj novi red
+        finalData.push(rowData);
+        newCount++;
+        existingVehicles.set(vehicleLabel, { 
+          rowIndex: finalData.length + 1, 
+          data: rowData 
+        });
       }
+    });
+
+    console.log(`Processing: ${updateCount} updates, ${newCount} new vehicles`);
+
+    // BATCH UPIS
+    const BATCH_SIZE = 500;
+    const batches = [];
+    
+    for (let i = 0; i < finalData.length; i += BATCH_SIZE) {
+      batches.push(finalData.slice(i, i + BATCH_SIZE));
     }
 
-    console.log(`Updates prepared: ${updatedRows} updated, ${newRows} new`);
+    console.log(`Writing ${batches.length} batches to Google Sheets`);
 
-    // Primeni update-e
-    if (updates.length > 0) {
-      const BATCH_SIZE = 100;
-      
-      for (let i = 0; i < updates.length; i += BATCH_SIZE) {
-        const batch = updates.slice(i, i + BATCH_SIZE);
-        
-        await sheets.spreadsheets.values.batchUpdate({
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
+      const startRow = (batchIndex * BATCH_SIZE) + 2;
+      const endRow = startRow + batch.length - 1;
+
+      try {
+        await sheets.spreadsheets.values.update({
           spreadsheetId,
+          range: `${sheetName}!A${startRow}:F${endRow}`,
+          valueInputOption: 'RAW',
           resource: {
-            valueInputOption: 'RAW',
-            data: batch
+            values: batch
           }
         });
-        
-        console.log(`✓ Batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(updates.length/BATCH_SIZE)} written`);
-        
-        if (i + BATCH_SIZE < updates.length) {
-          await new Promise(resolve => setTimeout(resolve, 200));
-        }
+        console.log(`✓ Batch ${batchIndex + 1}/${batches.length} written (rows ${startRow}-${endRow})`);
+      } catch (updateError) {
+        console.error(`Failed to write batch ${batchIndex + 1}:`, updateError.message);
+        throw updateError;
+      }
+
+      // Pauza između batch-eva
+      if (batchIndex < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
     }
 
-    console.log('=== Departures Update Complete ===');
+    // Sortiranje
+    try {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        resource: {
+          requests: [{
+            sortRange: {
+              range: {
+                sheetId: sheetId,
+                startRowIndex: 1,
+                startColumnIndex: 0,
+                endColumnIndex: 6,
+              },
+              sortSpecs: [{
+                dimensionIndex: 0,
+                sortOrder: 'ASCENDING',
+              }],
+            },
+          }],
+        },
+      });
+      console.log('✓ Data sorted successfully');
+    } catch (sortError) {
+      console.warn('Sort error (non-critical):', sortError.message);
+    }
+
+    console.log('=== Update Complete ===');
 
     res.status(200).json({ 
       success: true, 
-      updatedRows: updatedRows,
-      newRows: newRows,
-      totalUpdates: updates.length,
+      newVehicles: newCount,
+      updatedVehicles: updateCount,
+      totalProcessed: vehicles.length,
       timestamp,
-      sheetUsed: sheetName
+      sheetUsed: sheetName,
+      batchesWritten: batches.length
     });
 
   } catch (error) {
@@ -428,4 +283,4 @@ export default async function handler(req, res) {
       details: error.message
     });
   }
-      }
+}
