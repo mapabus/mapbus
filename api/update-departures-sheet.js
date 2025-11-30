@@ -289,205 +289,184 @@ export default async function handler(req, res) {
       console.log('No existing data, starting fresh');
     }
 
-    // KORAK 4: Integracija novih podataka
+    // KORAK 4: Integracija novih podataka u strukturu
     let updatedCount = 0;
     let newCount = 0;
-    const updateRequests = [];
-    const appendRows = [];
+
+    for (let route in routeMap) {
+      const directions = routeMap[route];
+      
+      if (!routeStructure.has(route)) {
+        // Nova linija
+        routeStructure.set(route, new Map());
+      }
+      
+      for (let direction in directions) {
+        if (!routeStructure.get(route).has(direction)) {
+          // Novi smer
+          routeStructure.get(route).set(direction, []);
+        }
+        
+        // Dodaj/ažuriraj polaske
+        const departures = directions[direction];
+        const existingDepartures = routeStructure.get(route).get(direction);
+        
+        departures.forEach(dep => {
+          const key = `${route}|${direction}|${dep.startTime}|${dep.vehicleLabel}`;
+          
+          if (existingDeparturesMap.has(key)) {
+            // Ažuriraj timestamp postojećeg polaska
+            const existing = existingDeparturesMap.get(key);
+            const index = existingDepartures.findIndex(
+              d => d.startTime === dep.startTime && d.vehicleLabel === dep.vehicleLabel
+            );
+            if (index !== -1) {
+              existingDepartures[index].timestamp = dep.timestamp;
+              updatedCount++;
+            }
+          } else {
+            // Dodaj novi polazak
+            existingDepartures.push(dep);
+            newCount++;
+          }
+        });
+        
+        // Sortiraj polaske po vremenu
+        existingDepartures.sort((a, b) => a.startTime.localeCompare(b.startTime));
+      }
+    }
+
+    console.log(`Updates: ${updatedCount}, New: ${newCount}`);
+
+    // KORAK 5: Regeneriši ceo sheet sa ažuriranim podacima
+    const allRows = [];
+    const formatRequests = [];
+    let currentRow = 0;
 
     // Sortiraj linije numerički
-    const sortedRoutes = Object.keys(routeMap).sort((a, b) => {
+    const sortedRoutes = Array.from(routeStructure.keys()).sort((a, b) => {
       const numA = parseInt(a.replace(/\D/g, '')) || 0;
       const numB = parseInt(b.replace(/\D/g, '')) || 0;
       return numA - numB;
     });
 
     for (let route of sortedRoutes) {
-      const directions = routeMap[route];
-      
-      if (!routeStructure.has(route)) {
-        // Nova linija
-        appendRows.push([`Linija ${route}`, '', '', '', '', '', '', '', '', '']);
-        routeStructure.set(route, new Map());
-        
-        const sortedDirections = Object.keys(directions).sort();
-        
-        for (let direction of sortedDirections) {
-          routeStructure.get(route).set(direction, []);
-          appendRows.push([`Smer: ${direction}`, '', '', '', '', '', '', '', '', '']);
-          appendRows.push(['Polazak', 'Vozilo', 'Poslednji put viđen', '', '', '', '', '', '', '']);
-          
-          const departures = directions[direction].sort((a, b) => 
-            a.startTime.localeCompare(b.startTime)
-          );
-          
-          departures.forEach(dep => {
-            appendRows.push([dep.startTime, dep.vehicleLabel, dep.timestamp, '', '', '', '', '', '', '']);
-            routeStructure.get(route).get(direction).push(dep);
-            newCount++;
-          });
-          
-          appendRows.push(['', '', '', '', '', '', '', '', '', '']);
-        }
-        
-        appendRows.push(['', '', '', '', '', '', '', '', '', '']);
-      }
-      else {
-        // Postojeća linija
-        for (let direction in directions) {
-          
-          if (!routeStructure.get(route).has(direction)) {
-            // Novi smer
-            routeStructure.get(route).set(direction, []);
-            appendRows.push([`Smer: ${direction}`, '', '', '', '', '', '', '', '', '']);
-            appendRows.push(['Polazak', 'Vozilo', 'Poslednji put viđen', '', '', '', '', '', '', '']);
-            
-            const departures = directions[direction].sort((a, b) => 
-              a.startTime.localeCompare(b.startTime)
-            );
-            
-            departures.forEach(dep => {
-              appendRows.push([dep.startTime, dep.vehicleLabel, dep.timestamp, '', '', '', '', '', '', '']);
-              routeStructure.get(route).get(direction).push(dep);
-              newCount++;
-            });
-            
-            appendRows.push(['', '', '', '', '', '', '', '', '', '']);
-          }
-          else {
-            // Postojeći smer - proveri polaske
-            const departures = directions[direction];
-            
-            departures.forEach(dep => {
-              const key = `${route}|${direction}|${dep.startTime}|${dep.vehicleLabel}`;
-              
-              if (existingDeparturesMap.has(key)) {
-                // Ažuriraj timestamp
-                const existing = existingDeparturesMap.get(key);
-                updateRequests.push({
-                  range: `${sheetName}!C${existing.row + 1}`,
-                  values: [[dep.timestamp]]
-                });
-                updatedCount++;
-              } else {
-                // Novi polazak
-                appendRows.push([dep.startTime, dep.vehicleLabel, dep.timestamp, '', '', '', '', '', '', '']);
-                routeStructure.get(route).get(direction).push(dep);
-                newCount++;
+      // Red za liniju
+      allRows.push([`Linija ${route}`, '', '', '', '', '', '', '', '', '']);
+      formatRequests.push({
+        repeatCell: {
+          range: {
+            sheetId: sheetId,
+            startRowIndex: currentRow,
+            endRowIndex: currentRow + 1,
+            startColumnIndex: 0,
+            endColumnIndex: 10
+          },
+          cell: {
+            userEnteredFormat: {
+              backgroundColor: { red: 0.12, green: 0.24, blue: 0.45 },
+              textFormat: {
+                foregroundColor: { red: 1, green: 1, blue: 1 },
+                fontSize: 14,
+                bold: true
               }
-            });
+            }
+          },
+          fields: 'userEnteredFormat(backgroundColor,textFormat)'
+        }
+      });
+      currentRow++;
+
+      const directions = routeStructure.get(route);
+      const sortedDirections = Array.from(directions.keys()).sort();
+
+      for (let direction of sortedDirections) {
+        // Red za smer
+        allRows.push([`Smer: ${direction}`, '', '', '', '', '', '', '', '', '']);
+        formatRequests.push({
+          repeatCell: {
+            range: {
+              sheetId: sheetId,
+              startRowIndex: currentRow,
+              endRowIndex: currentRow + 1,
+              startColumnIndex: 0,
+              endColumnIndex: 10
+            },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: { red: 0.85, green: 0.92, blue: 0.95 },
+                textFormat: {
+                  foregroundColor: { red: 0.12, green: 0.24, blue: 0.45 },
+                  fontSize: 12,
+                  bold: true
+                }
+              }
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat)'
           }
-        }
-      }
-    }
-
-    console.log(`Updates: ${updatedCount}, New: ${newCount}`);
-
-    // KORAK 5: Primeni izmene
-    if (updateRequests.length > 0) {
-      await sheets.spreadsheets.values.batchUpdate({
-        spreadsheetId,
-        resource: {
-          valueInputOption: 'RAW',
-          data: updateRequests
-        }
-      });
-      console.log(`✓ Updated ${updateRequests.length} timestamps`);
-    }
-
-    if (appendRows.length > 0) {
-      await sheets.spreadsheets.values.append({
-        spreadsheetId,
-        range: `${sheetName}!A:J`,
-        valueInputOption: 'RAW',
-        insertDataOption: 'INSERT_ROWS',
-        resource: { values: appendRows }
-      });
-      console.log(`✓ Appended ${appendRows.length} new rows`);
-
-      // Formatiranje novih redova
-      const formatRequests = [];
-      const startRow = existingData.length;
-      
-      for (let i = 0; i < appendRows.length; i++) {
-        const row = appendRows[i];
-        const actualRow = startRow + i;
-        
-        if (row[0] && row[0].startsWith('Linija ')) {
-          formatRequests.push({
-            repeatCell: {
-              range: {
-                sheetId: sheetId,
-                startRowIndex: actualRow,
-                endRowIndex: actualRow + 1,
-                startColumnIndex: 0,
-                endColumnIndex: 10
-              },
-              cell: {
-                userEnteredFormat: {
-                  backgroundColor: { red: 0.12, green: 0.24, blue: 0.45 },
-                  textFormat: {
-                    foregroundColor: { red: 1, green: 1, blue: 1 },
-                    fontSize: 14,
-                    bold: true
-                  }
-                }
-              },
-              fields: 'userEnteredFormat(backgroundColor,textFormat)'
-            }
-          });
-        } else if (row[0] && row[0].startsWith('Smer: ')) {
-          formatRequests.push({
-            repeatCell: {
-              range: {
-                sheetId: sheetId,
-                startRowIndex: actualRow,
-                endRowIndex: actualRow + 1,
-                startColumnIndex: 0,
-                endColumnIndex: 10
-              },
-              cell: {
-                userEnteredFormat: {
-                  backgroundColor: { red: 0.85, green: 0.92, blue: 0.95 },
-                  textFormat: {
-                    foregroundColor: { red: 0.12, green: 0.24, blue: 0.45 },
-                    fontSize: 12,
-                    bold: true
-                  }
-                }
-              },
-              fields: 'userEnteredFormat(backgroundColor,textFormat)'
-            }
-          });
-        } else if (row[0] === 'Polazak') {
-          formatRequests.push({
-            repeatCell: {
-              range: {
-                sheetId: sheetId,
-                startRowIndex: actualRow,
-                endRowIndex: actualRow + 1,
-                startColumnIndex: 0,
-                endColumnIndex: 3
-              },
-              cell: {
-                userEnteredFormat: {
-                  backgroundColor: { red: 0.95, green: 0.95, blue: 0.95 },
-                  textFormat: { fontSize: 10, bold: true }
-                }
-              },
-              fields: 'userEnteredFormat(backgroundColor,textFormat)'
-            }
-          });
-        }
-      }
-
-      if (formatRequests.length > 0) {
-        await sheets.spreadsheets.batchUpdate({
-          spreadsheetId,
-          resource: { requests: formatRequests }
         });
-        console.log(`✓ Applied ${formatRequests.length} format rules`);
+        currentRow++;
+
+        // Red za header
+        allRows.push(['Polazak', 'Vozilo', 'Poslednji put viđen', '', '', '', '', '', '', '']);
+        formatRequests.push({
+          repeatCell: {
+            range: {
+              sheetId: sheetId,
+              startRowIndex: currentRow,
+              endRowIndex: currentRow + 1,
+              startColumnIndex: 0,
+              endColumnIndex: 3
+            },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: { red: 0.95, green: 0.95, blue: 0.95 },
+                textFormat: { fontSize: 10, bold: true }
+              }
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat)'
+          }
+        });
+        currentRow++;
+
+        // Redovi za polaske (već sortirani)
+        const departures = directions.get(direction);
+        departures.forEach(dep => {
+          allRows.push([dep.startTime, dep.vehicleLabel, dep.timestamp, '', '', '', '', '', '', '']);
+          currentRow++;
+        });
+
+        // Prazan red posle smera
+        allRows.push(['', '', '', '', '', '', '', '', '', '']);
+        currentRow++;
       }
+
+      // Prazan red posle linije
+      allRows.push(['', '', '', '', '', '', '', '', '', '']);
+      currentRow++;
+    }
+
+    // Obriši postojeće podatke i upiši nove
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId,
+      range: `${sheetName}!A:J`
+    });
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${sheetName}!A1`,
+      valueInputOption: 'RAW',
+      resource: { values: allRows }
+    });
+    console.log(`✓ Wrote ${allRows.length} rows to sheet`);
+
+    // Primeni formatiranje
+    if (formatRequests.length > 0) {
+      await sheets.spreadsheets.batchUpdate({
+        spreadsheetId,
+        resource: { requests: formatRequests }
+      });
+      console.log(`✓ Applied ${formatRequests.length} format rules`);
     }
 
     const timestamp = new Date().toLocaleString('sr-RS', { 
@@ -506,7 +485,7 @@ export default async function handler(req, res) {
       success: true, 
       newDepartures: newCount,
       updatedDepartures: updatedCount,
-      totalNewRows: appendRows.length,
+      totalRows: allRows.length,
       timestamp,
       sheetUsed: sheetName
     });
