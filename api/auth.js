@@ -15,7 +15,7 @@ function verifyPassword(password, hashedPassword) {
 const auth = new google.auth.GoogleAuth({
   credentials: {
     client_email: process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
-    private_key: process.env.GOOGLE_SHEETS_PRIVATE_KEY?. replace(/\\n/g, '\n'),
+    private_key: process.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
   },
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
@@ -27,27 +27,27 @@ const USERS_SHEET = 'Users';
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res. setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
   const { action, username, password, token, userIndex, status, captcha, currentPassword, newPassword, favorites } = 
-    req.method === 'POST' ? req.body : req. query;
+    req.method === 'POST' ? req.body : req.query;
 
   try {
     let users = [];
     
     try {
-      const response = await sheets. spreadsheets.values.get({
+      const response = await sheets.spreadsheets.values.get({
         spreadsheetId: SPREADSHEET_ID,
         range: `${USERS_SHEET}!A:I`, // Prošireno na I kolonu (Favorites)
       });
 
       const rows = response.data.values || [];
       
-      if (rows. length === 0) {
+      if (rows.length === 0) {
         await sheets.spreadsheets.values.update({
           spreadsheetId: SPREADSHEET_ID,
           range: `${USERS_SHEET}!A1:I1`,
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
           }
         });
       } else {
-        users = rows. slice(1). map(row => ({
+        users = rows.slice(1).map(row => ({
           username: row[0] || '',
           passwordHash: row[1] || '',
           status: row[2] || 'pending',
@@ -107,15 +107,15 @@ export default async function handler(req, res) {
 
     // ====== REGISTRACIJA ======
     if (action === 'register') {
-      if (!captcha || captcha. trim() === '') {
+      if (!captcha || captcha.trim() === '') {
         return res.status(400).json({ 
           success: false, 
           message: 'Molimo potvrdite da niste robot' 
         });
       }
 
-      const existingUser = users. find(u => 
-        u.username. toLowerCase() === username. toLowerCase()
+      const existingUser = users.find(u => 
+        u.username.toLowerCase() === username.toLowerCase()
       );
 
       if (existingUser) {
@@ -125,7 +125,7 @@ export default async function handler(req, res) {
         });
       }
 
-      const now = new Date(). toLocaleString('sr-RS', { timeZone: 'Europe/Belgrade' });
+      const now = new Date().toLocaleString('sr-RS', { timeZone: 'Europe/Belgrade' });
       const hashedPassword = hashPassword(password);
 
       await sheets.spreadsheets.values.append({
@@ -145,7 +145,7 @@ export default async function handler(req, res) {
 
     // ====== LOGIN ======
     if (action === 'login') {
-      const user = users. find(u => u.username === username);
+      const user = users.find(u => u.username === username);
 
       if (!user) {
         return res.status(401).json({ 
@@ -175,26 +175,26 @@ export default async function handler(req, res) {
       }
 
       if (user.status !== 'approved') {
-        return res. status(403).json({ 
+        return res.status(403).json({ 
           success: false, 
           message: user.status === 'rejected' ? 'Nalog je odbijen' : 'Nalog još nije odobren' 
         });
       }
 
       // Ažuriraj IP i poslednji pristup
-      const userIdx = users.findIndex(u => u. username === username);
-      const ipHistory = user.ipHistory ?  `${user.ipHistory}, ${ip}` : ip;
+      const userIdx = users.findIndex(u => u.username === username);
+      const ipHistory = user.ipHistory ? `${user.ipHistory}, ${ip}` : ip;
       const now = new Date().toLocaleString('sr-RS', { timeZone: 'Europe/Belgrade' });
 
       // Ako je potrebna migracija, hešuj lozinku
-      const passwordToStore = needsMigration ?  hashPassword(password) : user.passwordHash;
+      const passwordToStore = needsMigration ? hashPassword(password) : user.passwordHash;
 
-      await sheets. spreadsheets.values.update({
+      await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
         range: `${USERS_SHEET}!B${userIdx + 2}:I${userIdx + 2}`,
         valueInputOption: 'RAW',
         resource: {
-          values: [[passwordToStore, user. status, user.registeredAt, ip, ipHistory, user.isAdmin ?  'true' : 'false', now, user.favorites || '']]
+          values: [[passwordToStore, user.status, user.registeredAt, ip, ipHistory, user.isAdmin ?  'true' : 'false', now, user.favorites || '']]
         }
       });
 
@@ -202,7 +202,7 @@ export default async function handler(req, res) {
         console.log(`✓ Migrated password for user: ${username}`);
       }
 
-      const authToken = Buffer.from(`${username}:${Date.now()}`). toString('base64');
+      const authToken = Buffer.from(`${username}:${Date.now()}`).toString('base64');
 
       return res.status(200).json({ 
         success: true, 
@@ -220,7 +220,7 @@ export default async function handler(req, res) {
       }
 
       try {
-        const decoded = Buffer.from(token, 'base64'). toString('utf-8');
+        const decoded = Buffer.from(token, 'base64').toString('utf-8');
         const [tokenUsername, timestamp] = decoded.split(':');
 
         const user = users.find(u => u.username === tokenUsername);
@@ -231,14 +231,14 @@ export default async function handler(req, res) {
 
         const tokenAge = Date.now() - parseInt(timestamp);
         if (tokenAge > 7 * 24 * 60 * 60 * 1000) {
-          return res. status(401).json({ success: false, message: 'Token je istekao' });
+          return res.status(401).json({ success: false, message: 'Token je istekao' });
         }
 
         // Ažuriraj poslednji pristup pri svakoj verifikaciji
-        const userIdx = users. findIndex(u => u.username === tokenUsername);
+        const userIdx = users.findIndex(u => u.username === tokenUsername);
         const now = new Date().toLocaleString('sr-RS', { timeZone: 'Europe/Belgrade' });
 
-        await sheets. spreadsheets.values.update({
+        await sheets.spreadsheets.values.update({
           spreadsheetId: SPREADSHEET_ID,
           range: `${USERS_SHEET}!H${userIdx + 2}`,
           valueInputOption: 'RAW',
@@ -247,7 +247,7 @@ export default async function handler(req, res) {
           }
         });
 
-        return res.status(200). json({ success: true, username: tokenUsername, isAdmin: user.isAdmin });
+        return res.status(200).json({ success: true, username: tokenUsername, isAdmin: user.isAdmin });
       } catch (e) {
         return res.status(401).json({ success: false, message: 'Nevažeći token' });
       }
@@ -268,17 +268,17 @@ export default async function handler(req, res) {
           return res.status(403).json({ success: false, message: 'Nemate admin privilegije' });
         }
       } catch (e) {
-        return res.status(401). json({ success: false, message: 'Nevažeći token' });
+        return res.status(401).json({ success: false, message: 'Nevažeći token' });
       }
 
-      const sanitizedUsers = users. map(u => ({
+      const sanitizedUsers = users.map(u => ({
         username: u.username,
         status: u.status,
         registeredAt: u.registeredAt,
         lastIP: u.lastIP,
         ipHistory: u.ipHistory,
         isAdmin: u.isAdmin,
-        lastAccess: u. lastAccess
+        lastAccess: u.lastAccess
       }));
 
       return res.status(200).json({ success: true, users: sanitizedUsers });
@@ -287,19 +287,19 @@ export default async function handler(req, res) {
     // ====== AŽURIRANJE STATUSA (za admin) ======
     if (action === 'updateStatus') {
       if (!token) {
-        return res. status(401).json({ success: false, message: 'Neautorizovan pristup' });
+        return res.status(401).json({ success: false, message: 'Neautorizovan pristup' });
       }
 
       try {
         const decoded = Buffer.from(token, 'base64').toString('utf-8');
         const [tokenUsername] = decoded.split(':');
-        const requestUser = users.find(u => u. username === tokenUsername);
+        const requestUser = users.find(u => u.username === tokenUsername);
         
         if (!requestUser || ! requestUser.isAdmin) {
           return res.status(403).json({ success: false, message: 'Nemate admin privilegije' });
         }
       } catch (e) {
-        return res. status(401).json({ success: false, message: 'Nevažeći token' });
+        return res.status(401).json({ success: false, message: 'Nevažeći token' });
       }
 
       if (! userIndex || !status) {
@@ -318,20 +318,20 @@ export default async function handler(req, res) {
         }
       });
 
-      return res.status(200). json({ success: true, message: 'Status ažuriran' });
+      return res.status(200).json({ success: true, message: 'Status ažuriran' });
     }
 
     // ====== UČITAVANJE KORISNIČKIH PODATAKA ======
     if (action === 'getUserData') {
       if (!token) {
-        return res. status(401).json({ success: false, message: 'Nema tokena' });
+        return res.status(401).json({ success: false, message: 'Nema tokena' });
       }
 
       try {
         const decoded = Buffer.from(token, 'base64').toString('utf-8');
-        const [tokenUsername, timestamp] = decoded. split(':');
+        const [tokenUsername, timestamp] = decoded.split(':');
 
-        const user = users. find(u => u.username === tokenUsername);
+        const user = users.find(u => u.username === tokenUsername);
         
         if (!user || user.status !== 'approved') {
           return res.status(401).json({ success: false, message: 'Nevažeći token' });
@@ -348,7 +348,7 @@ export default async function handler(req, res) {
           favorites: user.favorites || ''
         });
       } catch (e) {
-        return res.status(401). json({ success: false, message: 'Nevažeći token' });
+        return res.status(401).json({ success: false, message: 'Nevažeći token' });
       }
     }
 
@@ -360,9 +360,9 @@ export default async function handler(req, res) {
 
       try {
         const decoded = Buffer.from(token, 'base64').toString('utf-8');
-        const [tokenUsername, timestamp] = decoded. split(':');
+        const [tokenUsername, timestamp] = decoded.split(':');
 
-        const user = users. find(u => u.username === tokenUsername);
+        const user = users.find(u => u.username === tokenUsername);
         
         if (!user || user.status !== 'approved') {
           return res.status(401).json({ success: false, message: 'Nevažeći token' });
@@ -370,13 +370,13 @@ export default async function handler(req, res) {
 
         const tokenAge = Date.now() - parseInt(timestamp);
         if (tokenAge > 7 * 24 * 60 * 60 * 1000) {
-          return res.status(401). json({ success: false, message: 'Token je istekao' });
+          return res.status(401).json({ success: false, message: 'Token je istekao' });
         }
 
-        const userIdx = users.findIndex(u => u. username === tokenUsername);
+        const userIdx = users.findIndex(u => u.username === tokenUsername);
 
         // Sačuvaj favorites u kolonu I
-        await sheets. spreadsheets.values.update({
+        await sheets.spreadsheets.values.update({
           spreadsheetId: SPREADSHEET_ID,
           range: `${USERS_SHEET}!I${userIdx + 2}`,
           valueInputOption: 'RAW',
@@ -388,14 +388,14 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, message: 'Omiljene linije sačuvane' });
       } catch (e) {
         console.error('Save favorites error:', e);
-        return res. status(500).json({ success: false, message: 'Greška pri čuvanju' });
+        return res.status(500).json({ success: false, message: 'Greška pri čuvanju' });
       }
     }
 
     // ====== PROMENA LOZINKE ======
     if (action === 'changePassword') {
       if (!token) {
-        return res.status(401). json({ success: false, message: 'Nema tokena' });
+        return res.status(401).json({ success: false, message: 'Nema tokena' });
       }
 
       if (!currentPassword || ! newPassword) {
@@ -403,13 +403,13 @@ export default async function handler(req, res) {
       }
 
       try {
-        const decoded = Buffer. from(token, 'base64').toString('utf-8');
+        const decoded = Buffer.from(token, 'base64').toString('utf-8');
         const [tokenUsername, timestamp] = decoded.split(':');
 
         const user = users.find(u => u.username === tokenUsername);
         
         if (!user || user.status !== 'approved') {
-          return res. status(401).json({ success: false, message: 'Nevažeći token' });
+          return res.status(401).json({ success: false, message: 'Nevažeći token' });
         }
 
         const tokenAge = Date.now() - parseInt(timestamp);
@@ -419,7 +419,7 @@ export default async function handler(req, res) {
 
         // Proveri trenutnu lozinku
         let isPasswordValid = false;
-        if (verifyPassword(currentPassword, user. passwordHash)) {
+        if (verifyPassword(currentPassword, user.passwordHash)) {
           isPasswordValid = true;
         } else if (user.passwordHash === currentPassword) {
           // Stara plain text lozinka
@@ -434,7 +434,7 @@ export default async function handler(req, res) {
         const newHashedPassword = hashPassword(newPassword);
         const userIdx = users.findIndex(u => u.username === tokenUsername);
 
-        await sheets.spreadsheets. values.update({
+        await sheets.spreadsheets.values.update({
           spreadsheetId: SPREADSHEET_ID,
           range: `${USERS_SHEET}! B${userIdx + 2}`,
           valueInputOption: 'RAW',
