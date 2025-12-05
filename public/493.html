@@ -570,7 +570,6 @@
                 { time: "22:30", vehicle: "P79465", line: "493" },
                 { time: "23:45", vehicle: "P76436", line: "493" },
                 // 493a - prebačeno iz mladenovacToBas
-                { time: "00:15", vehicle: "P71317", line: "493a" },
                 { time: "00:15", vehicle: "P79462", line: "493a" },
                 // 493b - prebačeno iz mladenovacToBas
                 { time: "06:25", vehicle: "P71319", line: "493b" },
@@ -704,7 +703,6 @@
                 { time: "08:50", vehicle: "P79422", line: "493k" },
                 { time: "08:55", vehicle: "P71303", line: "493k" },
                 { time: "09:10", vehicle: "P70515", line: "493k" },
-                { time: "09:10", vehicle: "P71316", line: "493k" },
                 { time: "09:25", vehicle: "P71305", line: "493k" },
                 { time: "09:35", vehicle: "P71313", line: "493k" },
                 { time: "09:40", vehicle: "P71309", line: "493k" },
@@ -906,7 +904,7 @@
             sortedVehicles.forEach(([vehicle, count]) => {
                 html += `
                     <div class="search-result-item" onclick="highlightVehicle('${vehicle}')">
-                        <span class="result-vehicle">🚌 ${vehicle}</span>
+                        <span class="result-vehicle">${vehicle}</span>
                         <span class="result-count">${count} polazaka</span>
                     </div>
                 `;
@@ -961,3 +959,4 @@
     </script>
 </body>
 </html>
+
