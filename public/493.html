@@ -115,7 +115,7 @@
         }
 
         .clear-btn {
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) ! important;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
         }
 
         .search-results {
@@ -500,7 +500,97 @@
 
     <script>
         const scheduleData = {
+            // ISPRAVLJENO: Zamenjeni smerovi za sve linije osim 493k
             basToMladenovac: [
+                // 493 - prebačeno iz mladenovacToBas
+                { time: "04:40", vehicle: "P70606", line: "493" },
+                { time: "05:00", vehicle: "P71314", line: "493" },
+                { time: "05:20", vehicle: "P79465", line: "493" },
+                { time: "05:40", vehicle: "P79459", line: "493" },
+                { time: "05:45", vehicle: "P71310", line: "493" },
+                { time: "06:00", vehicle: "P71304", line: "493" },
+                { time: "06:20", vehicle: "P71317", line: "493" },
+                { time: "07:00", vehicle: "P70606", line: "493" },
+                { time: "07:15", vehicle: "P71314", line: "493" },
+                { time: "07:30", vehicle: "P79461", line: "493" },
+                { time: "07:45", vehicle: "P79465", line: "493" },
+                { time: "08:15", vehicle: "P71304", line: "493" },
+                { time: "08:16", vehicle: "P79404", line: "493" },
+                { time: "08:30", vehicle: "P70605", line: "493" },
+                { time: "08:45", vehicle: "P71310", line: "493" },
+                { time: "09:00", vehicle: "P71319", line: "493" },
+                { time: "09:15", vehicle: "P76436", line: "493" },
+                { time: "09:30", vehicle: "P70606", line: "493" },
+                { time: "09:45", vehicle: "P71314", line: "493" },
+                { time: "10:00", vehicle: "P79461", line: "493" },
+                { time: "10:15", vehicle: "P79465", line: "493" },
+                { time: "10:45", vehicle: "P71304", line: "493" },
+                { time: "11:00", vehicle: "P76435", line: "493" },
+                { time: "11:15", vehicle: "P71310", line: "493" },
+                { time: "11:30", vehicle: "P71319", line: "493" },
+                { time: "11:45", vehicle: "P76436", line: "493" },
+                { time: "12:00", vehicle: "P70606", line: "493" },
+                { time: "12:15", vehicle: "P71314", line: "493" },
+                { time: "12:30", vehicle: "P79461", line: "493" },
+                { time: "12:45", vehicle: "P79465", line: "493" },
+                { time: "13:15", vehicle: "P71304", line: "493" },
+                { time: "13:30", vehicle: "P70605", line: "493" },
+                { time: "13:45", vehicle: "P71310", line: "493" },
+                { time: "14:00", vehicle: "P71319", line: "493" },
+                { time: "14:10", vehicle: "P79414", line: "493" },
+                { time: "14:15", vehicle: "P76436", line: "493" },
+                { time: "14:30", vehicle: "P70606", line: "493" },
+                { time: "14:45", vehicle: "P71314", line: "493" },
+                { time: "15:00", vehicle: "P79461", line: "493" },
+                { time: "15:45", vehicle: "P71304", line: "493" },
+                { time: "16:00", vehicle: "P70605", line: "493" },
+                { time: "16:15", vehicle: "P71310", line: "493" },
+                { time: "16:25", vehicle: "P71317", line: "493" },
+                { time: "16:30", vehicle: "P71319", line: "493" },
+                { time: "16:45", vehicle: "P76436", line: "493" },
+                { time: "17:00", vehicle: "P70606", line: "493" },
+                { time: "17:15", vehicle: "P71314", line: "493" },
+                { time: "17:30", vehicle: "P79461", line: "493" },
+                { time: "17:45", vehicle: "P79465", line: "493" },
+                { time: "17:55", vehicle: "P79466", line: "493" },
+                { time: "18:15", vehicle: "P71304", line: "493" },
+                { time: "18:30", vehicle: "P70605", line: "493" },
+                { time: "18:45", vehicle: "P71310", line: "493" },
+                { time: "18:55", vehicle: "P71317", line: "493" },
+                { time: "19:00", vehicle: "P71319", line: "493" },
+                { time: "19:15", vehicle: "P76436", line: "493" },
+                { time: "19:20", vehicle: "P79404", line: "493" },
+                { time: "19:30", vehicle: "P70606", line: "493" },
+                { time: "19:45", vehicle: "P71314", line: "493" },
+                { time: "20:00", vehicle: "P79461", line: "493" },
+                { time: "20:15", vehicle: "P79465", line: "493" },
+                { time: "20:50", vehicle: "P70605", line: "493" },
+                { time: "21:10", vehicle: "P71310", line: "493" },
+                { time: "21:50", vehicle: "P70606", line: "493" },
+                { time: "22:30", vehicle: "P79465", line: "493" },
+                { time: "23:45", vehicle: "P76436", line: "493" },
+                // 493a - prebačeno iz mladenovacToBas
+                { time: "00:15", vehicle: "P71317", line: "493a" },
+                { time: "00:15", vehicle: "P79462", line: "493a" },
+                // 493b - prebačeno iz mladenovacToBas
+                { time: "06:25", vehicle: "P71319", line: "493b" },
+                { time: "06:40", vehicle: "P76436", line: "493b" },
+                { time: "15:10", vehicle: "P79465", line: "493b" },
+                { time: "21:30", vehicle: "P76436", line: "493b" },
+                { time: "22:15", vehicle: "P71317", line: "493b" },
+                { time: "23:15", vehicle: "P70605", line: "493b" },
+                // 493N - prebačeno iz mladenovacToBas
+                { time: "01:30", vehicle: "P79414", line: "493N" },
+                // 499 - prebačeno iz mladenovacToBas
+                { time: "06:50", vehicle: "P79414", line: "499" },
+                { time: "08:50", vehicle: "P71317", line: "499" },
+                { time: "11:10", vehicle: "P79414", line: "499" },
+                { time: "13:15", vehicle: "P79422", line: "499" },
+                { time: "15:45", vehicle: "P79404", line: "499" },
+                { time: "20:15", vehicle: "P79460", line: "499" }
+            ],
+            mladenovacToBas: [
+                // 493 - prebačeno iz basToMladenovac
                 { time: "04:00", vehicle: "P71314", line: "493" },
                 { time: "04:20", vehicle: "P79465", line: "493" },
                 { time: "04:40", vehicle: "P79459", line: "493" },
@@ -572,90 +662,18 @@
                 { time: "22:35", vehicle: "P76436", line: "493" },
                 { time: "23:10", vehicle: "P79462", line: "493" },
                 { time: "23:50", vehicle: "P71317", line: "493" },
+                // 493b - prebačeno iz basToMladenovac
                 { time: "03:40", vehicle: "P70606", line: "493b" },
+                // 493N - prebačeno iz basToMladenovac
                 { time: "02:30", vehicle: "P71304", line: "493N" },
+                // 499 - prebačeno iz basToMladenovac
                 { time: "04:00", vehicle: "P71310", line: "499" },
                 { time: "05:00", vehicle: "P79414", line: "499" },
                 { time: "09:20", vehicle: "P79414", line: "499" },
                 { time: "14:05", vehicle: "P79404", line: "499" },
                 { time: "17:30", vehicle: "P79404", line: "499" },
-                { time: "18:10", vehicle: "P79460", line: "499" }
-            ],
-            mladenovacToBas: [
-                { time: "04:40", vehicle: "P70606", line: "493" },
-                { time: "05:00", vehicle: "P71314", line: "493" },
-                { time: "05:20", vehicle: "P79465", line: "493" },
-                { time: "05:40", vehicle: "P79459", line: "493" },
-                { time: "05:45", vehicle: "P71310", line: "493" },
-                { time: "06:00", vehicle: "P71304", line: "493" },
-                { time: "06:20", vehicle: "P71317", line: "493" },
-                { time: "07:00", vehicle: "P70606", line: "493" },
-                { time: "07:15", vehicle: "P71314", line: "493" },
-                { time: "07:30", vehicle: "P79461", line: "493" },
-                { time: "07:45", vehicle: "P79465", line: "493" },
-                { time: "08:15", vehicle: "P71304", line: "493" },
-                { time: "08:16", vehicle: "P79404", line: "493" },
-                { time: "08:30", vehicle: "P70605", line: "493" },
-                { time: "08:45", vehicle: "P71310", line: "493" },
-                { time: "09:00", vehicle: "P71319", line: "493" },
-                { time: "09:15", vehicle: "P76436", line: "493" },
-                { time: "09:30", vehicle: "P70606", line: "493" },
-                { time: "09:45", vehicle: "P71314", line: "493" },
-                { time: "10:00", vehicle: "P79461", line: "493" },
-                { time: "10:15", vehicle: "P79465", line: "493" },
-                { time: "10:45", vehicle: "P71304", line: "493" },
-                { time: "11:00", vehicle: "P76435", line: "493" },
-                { time: "11:15", vehicle: "P71310", line: "493" },
-                { time: "11:30", vehicle: "P71319", line: "493" },
-                { time: "11:45", vehicle: "P76436", line: "493" },
-                { time: "12:00", vehicle: "P70606", line: "493" },
-                { time: "12:15", vehicle: "P71314", line: "493" },
-                { time: "12:30", vehicle: "P79461", line: "493" },
-                { time: "12:45", vehicle: "P79465", line: "493" },
-                { time: "13:15", vehicle: "P71304", line: "493" },
-                { time: "13:30", vehicle: "P70605", line: "493" },
-                { time: "13:45", vehicle: "P71310", line: "493" },
-                { time: "14:00", vehicle: "P71319", line: "493" },
-                { time: "14:10", vehicle: "P79414", line: "493" },
-                { time: "14:15", vehicle: "P76436", line: "493" },
-                { time: "14:30", vehicle: "P70606", line: "493" },
-                { time: "14:45", vehicle: "P71314", line: "493" },
-                { time: "15:00", vehicle: "P79461", line: "493" },
-                { time: "15:45", vehicle: "P71304", line: "493" },
-                { time: "16:00", vehicle: "P70605", line: "493" },
-                { time: "16:15", vehicle: "P71310", line: "493" },
-                { time: "16:25", vehicle: "P71317", line: "493" },
-                { time: "16:30", vehicle: "P71319", line: "493" },
-                { time: "16:45", vehicle: "P76436", line: "493" },
-                { time: "17:00", vehicle: "P70606", line: "493" },
-                { time: "17:15", vehicle: "P71314", line: "493" },
-                { time: "17:30", vehicle: "P79461", line: "493" },
-                { time: "17:45", vehicle: "P79465", line: "493" },
-                { time: "17:55", vehicle: "P79466", line: "493" },
-                { time: "18:15", vehicle: "P71304", line: "493" },
-                { time: "18:30", vehicle: "P70605", line: "493" },
-                { time: "18:45", vehicle: "P71310", line: "493" },
-                { time: "18:55", vehicle: "P71317", line: "493" },
-                { time: "19:00", vehicle: "P71319", line: "493" },
-                { time: "19:15", vehicle: "P76436", line: "493" },
-                { time: "19:20", vehicle: "P79404", line: "493" },
-                { time: "19:30", vehicle: "P70606", line: "493" },
-                { time: "19:45", vehicle: "P71314", line: "493" },
-                { time: "20:00", vehicle: "P79461", line: "493" },
-                { time: "20:15", vehicle: "P79465", line: "493" },
-                { time: "20:50", vehicle: "P70605", line: "493" },
-                { time: "21:10", vehicle: "P71310", line: "493" },
-                { time: "21:50", vehicle: "P70606", line: "493" },
-                { time: "22:30", vehicle: "P79465", line: "493" },
-                { time: "23:45", vehicle: "P76436", line: "493" },
-                { time: "00:15", vehicle: "P71317", line: "493a" },
-                { time: "00:15", vehicle: "P79462", line: "493a" },
-                { time: "06:25", vehicle: "P71319", line: "493b" },
-                { time: "06:40", vehicle: "P76436", line: "493b" },
-                { time: "15:10", vehicle: "P79465", line: "493b" },
-                { time: "21:30", vehicle: "P76436", line: "493b" },
-                { time: "22:15", vehicle: "P71317", line: "493b" },
-                { time: "23:15", vehicle: "P70605", line: "493b" },
+                { time: "18:10", vehicle: "P79460", line: "499" },
+                // 493k - OSTAJE ISTO (nije menjan smer)
                 { time: "04:25", vehicle: "P71308", line: "493k" },
                 { time: "04:45", vehicle: "P71300", line: "493k" },
                 { time: "04:50", vehicle: "P71303", line: "493k" },
@@ -749,14 +767,7 @@
                 { time: "19:50", vehicle: "P71306", line: "493k" },
                 { time: "20:05", vehicle: "P71312", line: "493k" },
                 { time: "20:10", vehicle: "P71316", line: "493k" },
-                { time: "20:35", vehicle: "P71318", line: "493k" },
-                { time: "01:30", vehicle: "P79414", line: "493N" },
-                { time: "06:50", vehicle: "P79414", line: "499" },
-                { time: "08:50", vehicle: "P71317", line: "499" },
-                { time: "11:10", vehicle: "P79414", line: "499" },
-                { time: "13:15", vehicle: "P79422", line: "499" },
-                { time: "15:45", vehicle: "P79404", line: "499" },
-                { time: "20:15", vehicle: "P79460", line: "499" }
+                { time: "20:35", vehicle: "P71318", line: "493k" }
             ]
         };
 
@@ -791,12 +802,9 @@
                 hourlyData[hour].push({ minute, vehicle: dep.vehicle, line: dep.line });
             });
 
+            // ISPRAVLJENO: Sortiranje - 00, 01, 02, 03 idu NA POČETAK (pre 04)
             const sortedHours = Object.keys(hourlyData).sort((a, b) => {
-                const hourA = parseInt(a);
-                const hourB = parseInt(b);
-                const adjustedA = hourA < 4 ? hourA + 24 : hourA;
-                const adjustedB = hourB < 4 ? hourB + 24 : hourB;
-                return adjustedA - adjustedB;
+                return parseInt(a) - parseInt(b);
             });
 
             let html = '';
@@ -859,7 +867,7 @@
 
         // Zatvori tooltip klikom bilo gde
         document.addEventListener('click', function(e) {
-            if (activeTooltip && ! e.target.closest('.minute-badge')) {
+            if (activeTooltip && !e.target.closest('.minute-badge')) {
                 activeTooltip.classList.remove('show');
                 activeTooltip = null;
             }
@@ -952,6 +960,4 @@
         updateStats();
     </script>
 </body>
-
 </html>
-
