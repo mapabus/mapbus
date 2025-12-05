@@ -111,7 +111,7 @@
 
         .search-box button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(30, 60, 114, 0. 4);
+            box-shadow: 0 6px 20px rgba(30, 60, 114, 0.4);
         }
 
         .clear-btn {
@@ -187,7 +187,7 @@
             text-align: center;
         }
 
-        .direction-header. reverse {
+        .direction-header.reverse {
             background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
         }
 
@@ -256,7 +256,7 @@
             transform: scale(1.05);
         }
 
-        .minute-badge . minute {
+        .minute-badge .minute {
             font-size: 16px;
             font-weight: bold;
         }
@@ -274,10 +274,10 @@
         .minute-badge.highlighted {
             background: #ffc107;
             color: #333;
-            animation: pulse 1. 5s infinite;
+            animation: pulse 1.5s infinite;
         }
 
-        . minute-badge.highlighted .line-tag {
+        .minute-badge.highlighted .line-tag {
             color: #333;
         }
 
@@ -287,7 +287,7 @@
         }
 
         /* Boje za različite linije */
-        . minute-badge.line-580 { border-left: 4px solid #2196F3; }
+        .minute-badge.line-580 { border-left: 4px solid #2196F3; }
         .minute-badge.line-581 { border-left: 4px solid #4CAF50; }
         .minute-badge.line-581a { border-left: 4px solid #FF9800; }
         .minute-badge.line-581e { border-left: 4px solid #9C27B0; }
@@ -327,7 +327,7 @@
             visibility: visible;
         }
 
-        . tooltip-vehicle {
+        .tooltip-vehicle {
             font-weight: bold;
             font-size: 16px;
         }
@@ -378,7 +378,7 @@
         .legend-color.c-581 { background: #4CAF50; }
         .legend-color.c-581a { background: #FF9800; }
         .legend-color.c-581e { background: #9C27B0; }
-        .legend-color. c-581N { background: #f44336; }
+        .legend-color.c-581N { background: #f44336; }
         .legend-color.c-highlight { background: #ffc107; }
 
         .stats-bar {
@@ -401,7 +401,7 @@
             color: #1e3c72;
         }
 
-        . stat-label {
+        .stat-label {
             font-size: 12px;
             color: #666;
         }
@@ -417,7 +417,7 @@
                 min-width: 45px;
             }
             
-            . minute-badge .minute {
+            .minute-badge .minute {
                 font-size: 14px;
             }
             
@@ -458,7 +458,7 @@
         <div class="search-container">
             <div class="search-box">
                 <label for="vehicleSearch">🔍 Pretraga vozila:</label>
-                <input type="text" id="vehicleSearch" placeholder="Unesite broj vozila (npr. P58504)">
+                <input type="text" id="vehicleSearch" placeholder="Unesite broj vozila (npr.P58504)">
                 <button onclick="searchVehicle()">Pretraži</button>
                 <button class="clear-btn" onclick="clearSearch()">Obriši</button>
             </div>
@@ -683,7 +683,7 @@
                 if (seen.has(key)) {
                     return false;
                 }
-                seen. add(key);
+                seen.add(key);
                 return true;
             });
         }
@@ -703,11 +703,11 @@
                 if (!hourlyData[hour]) {
                     hourlyData[hour] = [];
                 }
-                hourlyData[hour]. push({ minute, vehicle: dep. vehicle, line: dep.line });
+                hourlyData[hour].push({ minute, vehicle: dep.vehicle, line: dep.line });
             });
 
             // Sortiranje - 00, 01, 02, 03 idu na kraj (posle 23)
-            const sortedHours = Object. keys(hourlyData).sort((a, b) => {
+            const sortedHours = Object.keys(hourlyData).sort((a, b) => {
                 const hourA = parseInt(a);
                 const hourB = parseInt(b);
                 // Sati 00-03 se tretiraju kao 24-27 za sortiranje
@@ -718,22 +718,22 @@
 
             let html = '';
             sortedHours.forEach(hour => {
-                const minutes = hourlyData[hour].sort((a, b) => parseInt(a.minute) - parseInt(b. minute));
+                const minutes = hourlyData[hour].sort((a, b) => parseInt(a.minute) - parseInt(b.minute));
                 html += `
                     <div class="hour-row">
                         <div class="hour-cell">${hour}</div>
                         <div class="minutes-cell">
                             ${minutes.map(m => `
-                                <span class="minute-badge line-${m.line. replace(/\s/g, '')}" 
-                                      data-time="${hour}:${m. minute}" 
+                                <span class="minute-badge line-${m.line.replace(/\s/g, '')}" 
+                                      data-time="${hour}:${m.minute}" 
                                       data-vehicle="${m.vehicle}"
-                                      data-line="${m. line}"
+                                      data-line="${m.line}"
                                       data-direction="${direction}"
                                       onclick="toggleTooltip(event, this)">
                                     <span class="minute">${m.minute}</span>
                                     <span class="line-tag">${m.line}</span>
                                     <div class="tooltip">
-                                        <div class="tooltip-vehicle">${m. vehicle}</div>
+                                        <div class="tooltip-vehicle">${m.vehicle}</div>
                                         <div class="tooltip-line">Linija ${m.line}</div>
                                     </div>
                                 </span>
@@ -748,11 +748,11 @@
 
         // Statistike
         function updateStats() {
-            const totalDepartures = scheduleData.basToLazarevac.length + scheduleData. lazarevacToBas.length;
+            const totalDepartures = scheduleData.basToLazarevac.length + scheduleData.lazarevacToBas.length;
             document.getElementById('totalDepartures').textContent = totalDepartures;
 
             const allVehicles = new Set();
-            [... scheduleData.basToLazarevac, ...scheduleData.lazarevacToBas]. forEach(dep => {
+            [...scheduleData.basToLazarevac, ...scheduleData.lazarevacToBas].forEach(dep => {
                 allVehicles.add(dep.vehicle);
             });
             document.getElementById('totalVehicles').textContent = allVehicles.size;
@@ -770,21 +770,21 @@
             }
             
             // Toggle trenutni
-            tooltip.classList. toggle('show');
-            activeTooltip = tooltip. classList.contains('show') ? tooltip : null;
+            tooltip.classList.toggle('show');
+            activeTooltip = tooltip.classList.contains('show') ? tooltip : null;
         }
 
         // Zatvori tooltip klikom bilo gde
-        document. addEventListener('click', function(e) {
-            if (activeTooltip && ! e.target.closest('. minute-badge')) {
-                activeTooltip. classList.remove('show');
+        document.addEventListener('click', function(e) {
+            if (activeTooltip && ! e.target.closest('.minute-badge')) {
+                activeTooltip.classList.remove('show');
                 activeTooltip = null;
             }
         });
 
         // Pretraga vozila
         function searchVehicle() {
-            const query = document.getElementById('vehicleSearch').value. trim(). toUpperCase();
+            const query = document.getElementById('vehicleSearch').value.trim().toUpperCase();
             const resultsContainer = document.getElementById('searchResults');
 
             if (!query) {
@@ -794,22 +794,22 @@
 
             const allVehicles = new Map();
             
-            [... scheduleData.basToLazarevac, ...scheduleData.lazarevacToBas]. forEach(dep => {
-                if (dep.vehicle. toUpperCase().includes(query)) {
-                    if (!allVehicles.has(dep. vehicle)) {
-                        allVehicles.set(dep. vehicle, 0);
+            [...scheduleData.basToLazarevac, ...scheduleData.lazarevacToBas].forEach(dep => {
+                if (dep.vehicle.toUpperCase().includes(query)) {
+                    if (!allVehicles.has(dep.vehicle)) {
+                        allVehicles.set(dep.vehicle, 0);
                     }
-                    allVehicles.set(dep.vehicle, allVehicles. get(dep.vehicle) + 1);
+                    allVehicles.set(dep.vehicle, allVehicles.get(dep.vehicle) + 1);
                 }
             });
 
             if (allVehicles.size === 0) {
                 resultsContainer.innerHTML = '<div class="search-result-item"><span>Vozilo nije pronađeno</span></div>';
-                resultsContainer.classList. add('show');
+                resultsContainer.classList.add('show');
                 return;
             }
 
-            const sortedVehicles = [... allVehicles. entries()].sort((a, b) => b[1] - a[1]);
+            const sortedVehicles = [...allVehicles.entries()].sort((a, b) => b[1] - a[1]);
 
             let html = '';
             sortedVehicles.forEach(([vehicle, count]) => {
@@ -831,7 +831,7 @@
                 b.classList.remove('highlighted');
             });
 
-            document.querySelectorAll('.minute-badge'). forEach(b => {
+            document.querySelectorAll('.minute-badge').forEach(b => {
                 if (b.dataset.vehicle === vehicle) {
                     b.classList.add('highlighted');
                 }
@@ -856,15 +856,15 @@
 
         // Live pretraga
         document.getElementById('vehicleSearch').addEventListener('input', function() {
-            if (this.value. length >= 2) {
+            if (this.value.length >= 2) {
                 searchVehicle();
             } else {
-                document.getElementById('searchResults').classList. remove('show');
+                document.getElementById('searchResults').classList.remove('show');
             }
         });
 
         // Inicijalizacija
-        generateSchedule('schedule-bas', scheduleData. basToLazarevac, 'BAS → Lazarevac AS');
+        generateSchedule('schedule-bas', scheduleData.basToLazarevac, 'BAS → Lazarevac AS');
         generateSchedule('schedule-lazarevac', scheduleData.lazarevacToBas, 'Lazarevac AS → BAS');
         updateStats();
     </script>
