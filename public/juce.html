@@ -54,10 +54,6 @@
             gap: 10px;
         }
 
-        . info-banner-icon {
-            font-size: 24px;
-        }
-
         .info-banner-text {
             color: #856404;
             font-size: 14px;
@@ -72,22 +68,30 @@
         }
 
         .search-box {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 30px;
-            align-items: flex-end;
-            flex-wrap: wrap;
+            margin-bottom: 20px;
         }
 
-        .search-group-wrapper {
+        .search-column {
             display: flex;
-            gap: 15px;
-            align-items: flex-end;
-            flex: 1;
-            min-width: 300px;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        .search-group-wrapper . search-group {
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-wrapper input[type="text"] {
             flex: 1;
+        }
+
+        .input-wrapper button {
+            flex-shrink: 0;
         }
 
         .search-group {
@@ -102,15 +106,16 @@
             font-size: 14px;
         }
 
-        input {
+        input[type="text"] {
             padding: 12px 18px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 16px;
             transition: all 0.3s;
+            width: 100%;
         }
 
-        input:focus {
+        input[type="text"]:focus {
             outline: none;
             border-color: #1e3c72;
             box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
@@ -131,11 +136,50 @@
 
         button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(30, 60, 114, 0. 4);
+            box-shadow: 0 6px 20px rgba(30, 60, 114, 0.4);
         }
 
         button:active {
             transform: translateY(0);
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .radio-option input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .radio-option label {
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        .search-type-info {
+            background: #e3f2fd;
+            border-left: 4px solid #1e3c72;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #555;
+            line-height: 1.4;
+        }
+
+        .search-type-info strong {
+            color: #1e3c72;
         }
 
         .results-container {
@@ -211,12 +255,12 @@
             gap: 10px;
         }
 
-        . departure-item {
+        .departure-item {
             background: #f8f9fa;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             padding: 12px 18px;
-            transition: all 0. 2s;
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             gap: 15px;
@@ -283,34 +327,55 @@
         }
 
         .loading::after {
-            content: '... ';
+            content: '...';
             animation: dots 1.5s steps(4, end) infinite;
         }
 
         @keyframes dots {
-            0%, 20% { content: '. '; }
+            0%, 20% { content: '.'; }
             40% { content: '..'; }
             60%, 100% { content: '...'; }
         }
 
-        @media (max-width: 768px) {
+        .multiple-results-header {
+            background: white;
+            padding: 20px 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .multiple-results-title {
+            font-size: 22px;
+            color: #1e3c72;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .multiple-results-subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        @media (max-width: 968px) {
             .search-box {
+                grid-template-columns: 1fr;
+                gap: 25px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .input-wrapper {
                 flex-direction: column;
-                gap: 20px;
             }
 
-            .search-group-wrapper {
+            .input-wrapper button {
+                width: 100%;
+            }
+
+            .radio-group {
                 flex-direction: column;
-                width: 100%;
-                min-width: unset;
-            }
-
-            .search-group-wrapper .search-group {
-                width: 100%;
-            }
-
-            .search-group-wrapper button {
-                width: 100%;
+                gap: 10px;
             }
 
             .departures-list {
@@ -356,7 +421,7 @@
         <div class="info-banner">
             <div>
                 <div class="info-banner-text">
-                    <strong>Napomena:</strong> Ovi podaci predstavljaju sve polaske koji su evidentirani juče.  
+                    <strong>Napomena:</strong> Ovi podaci predstavljaju sve polaske koji su evidentirani juče. 
                     Baza se resetuje svakodnevno oko 1 ujutru.
                 </div>
             </div>
@@ -364,30 +429,54 @@
 
         <div class="search-container">
             <div class="search-box">
-                <!-- Grupa za liniju -->
-                <div class="search-group-wrapper">
-                    <div class="search-group">
-                        <label for="lineSearch">Broj linije:</label>
+                <!-- Leva kolona - Pretraga po liniji -->
+                <div class="search-column">
+                    <label for="lineSearch">Broj linije:</label>
+                    <div class="input-wrapper">
                         <input 
                             type="text" 
                             id="lineSearch" 
-                            placeholder="Unesite broj linije (npr. 601)"
+                            placeholder="Unesite broj linije (npr.601)"
                         >
+                        <button id="lineSearchBtn">Pretraži liniju</button>
                     </div>
-                    <button id="lineSearchBtn">Pretraži liniju</button>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input 
+                                type="radio" 
+                                id="exactMatch" 
+                                name="searchType" 
+                                value="exact" 
+                                checked
+                            >
+                            <label for="exactMatch">Tačan naziv</label>
+                        </div>
+                        <div class="radio-option">
+                            <input 
+                                type="radio" 
+                                id="partialMatch" 
+                                name="searchType" 
+                                value="partial"
+                            >
+                            <label for="partialMatch">Delimična pretraga</label>
+                        </div>
+                    </div>
+                    <div class="search-type-info" id="searchTypeInfo">
+                        <strong>Tačan naziv:</strong> Pronalazi samo liniju sa tačno unetim brojem
+                    </div>
                 </div>
 
-                <!-- Grupa za vozilo -->
-                <div class="search-group-wrapper">
-                    <div class="search-group">
-                        <label for="vehicleSearch">Broj vozila:</label>
+                <!-- Desna kolona - Pretraga po vozilu -->
+                <div class="search-column">
+                    <label for="vehicleSearch">Broj vozila:</label>
+                    <div class="input-wrapper">
                         <input 
                             type="text" 
                             id="vehicleSearch" 
-                            placeholder="npr. P70618"
+                            placeholder="npr.P70618"
                         >
+                        <button id="vehicleSearchBtn">Pretraži vozilo</button>
                     </div>
-                    <button id="vehicleSearchBtn">Pretraži vozilo</button>
                 </div>
             </div>
         </div>
@@ -406,6 +495,9 @@
             const vehicleInput = document.getElementById('vehicleSearch');
             const lineBtn = document.getElementById('lineSearchBtn');
             const vehicleBtn = document.getElementById('vehicleSearchBtn');
+            const exactMatch = document.getElementById('exactMatch');
+            const partialMatch = document.getElementById('partialMatch');
+            const searchTypeInfo = document.getElementById('searchTypeInfo');
 
             lineBtn.addEventListener('click', searchLine);
             vehicleBtn.addEventListener('click', searchVehicle);
@@ -414,17 +506,30 @@
             lineInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') searchLine();
             });
-            vehicleInput. addEventListener('keypress', (e) => {
+            vehicleInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') searchVehicle();
             });
+
+            // Promeni info tekst kada se promeni tip pretrage
+            exactMatch.addEventListener('change', updateSearchInfo);
+            partialMatch.addEventListener('change', updateSearchInfo);
+
+            function updateSearchInfo() {
+                if (exactMatch.checked) {
+                    searchTypeInfo.innerHTML = '<strong>Tačan naziv:</strong> Pronalazi samo liniju sa tačno unetim brojem';
+                } else {
+                    searchTypeInfo.innerHTML = '<strong>Delimična pretraga:</strong> Pronalazi sve linije koje sadrže uneti tekst (npr."493" → 493, 493A, 493B; "N" → 16N, 27N, 33N)';
+                }
+            }
         });
 
         async function searchLine() {
             const searchInput = document.getElementById('lineSearch');
-            const lineNumber = searchInput.value.trim(). toUpperCase();
-            const resultsContainer = document. getElementById('resultsContainer');
+            const lineNumber = searchInput.value.trim().toUpperCase();
+            const resultsContainer = document.getElementById('resultsContainer');
+            const searchType = document.querySelector('input[name="searchType"]:checked').value;
 
-            if (! lineNumber) {
+            if (!lineNumber) {
                 alert('Unesite broj linije');
                 return;
             }
@@ -441,23 +546,38 @@
                     return;
                 }
 
-                const routeData = data.routes. find(route => 
-                    route. routeName.toUpperCase() === lineNumber
-                );
+                let matchedRoutes = [];
 
-                if (!routeData) {
+                if (searchType === 'exact') {
+                    // Tačna pretraga
+                    const routeData = data.routes.find(route => 
+                        route.routeName.toUpperCase() === lineNumber
+                    );
+                    if (routeData) {
+                        matchedRoutes.push(routeData);
+                    }
+                } else {
+                    // Delimična pretraga
+                    matchedRoutes = data.routes.filter(route =>
+                        route.routeName.toUpperCase().includes(lineNumber)
+                    );
+                    // Sortiraj rezultate
+                    matchedRoutes.sort((a, b) => a.routeName.localeCompare(b.routeName, 'sr', { numeric: true }));
+                }
+
+                if (matchedRoutes.length === 0) {
                     resultsContainer.innerHTML = `
                         <div class="no-data">
-                            Linija "${lineNumber}" nije pronađena u jučerašnjim podacima. <br>
+                            ${searchType === 'exact' ?  'Linija' : 'Nijedna linija koja sadrži'} "${lineNumber}" nije pronađena u jučerašnjim podacima.<br>
                             <small style="color: #999; margin-top: 10px; display: block;">
-                                Možda linija nije imala evidentirane polaske juče.
+                                ${searchType === 'exact' ?  'Možda linija nije imala evidentirane polaske juče.' : 'Pokušajte sa drugim brojem ili slovom.'}
                             </small>
                         </div>
                     `;
                     return;
                 }
 
-                displayResults(routeData);
+                displayMultipleResults(matchedRoutes, lineNumber, searchType);
 
             } catch (error) {
                 console.error('Greška:', error);
@@ -465,52 +585,68 @@
             }
         }
 
-        function displayResults(routeData) {
+        function displayMultipleResults(routes, searchQuery, searchType) {
             const resultsContainer = document.getElementById('resultsContainer');
             
-            let totalDepartures = 0;
-            routeData.directions.forEach(dir => {
-                totalDepartures += dir.departures. length;
-            });
+            let html = '';
 
-            let html = `
-                <div class="route-section">
-                    <div class="route-header">
-                        <div class="route-title">Linija ${routeData.routeName}</div>
-                        <div class="route-stats">
-                            ${routeData. directions.length} ${routeData.directions.length === 1 ? 'smer' : 'smera'} • 
-                            ${totalDepartures} ${totalDepartures === 1 ?  'polazak' : totalDepartures < 5 ? 'polaska' : 'polazaka'}
-                        </div>
-                    </div>
-            `;
-
-            routeData.directions. forEach(direction => {
+            // Ako ima više linija, dodaj header
+            if (routes.length > 1) {
                 html += `
-                    <div class="direction-section">
-                        <div class="direction-header">
-                            <div class="direction-title">Smer (ide ka): ${direction.directionName}</div>
-                            <div class="direction-count">${direction.departures.length}</div>
+                    <div class="multiple-results-header">
+                        <div class="multiple-results-title">Pronađeno: ${routes.length} ${routes.length === 1 ? 'linija' : routes.length < 5 ? 'linije' : 'linija'}</div>
+                        <div class="multiple-results-subtitle">Pretraga za: "${searchQuery}"</div>
+                    </div>
+                `;
+            }
+
+            // Prikaži svaku liniju
+            routes.forEach(routeData => {
+                let totalDepartures = 0;
+                routeData.directions.forEach(dir => {
+                    totalDepartures += dir.departures.length;
+                });
+
+                html += `
+                    <div class="route-section">
+                        <div class="route-header">
+                            <div class="route-title">Linija ${routeData.routeName}</div>
+                            <div class="route-stats">
+                                ${routeData.directions.length} ${routeData.directions.length === 1 ?  'smer' : 'smera'} • 
+                                ${totalDepartures} ${totalDepartures === 1 ? 'polazak' : totalDepartures < 5 ?  'polaska' : 'polazaka'}
+                            </div>
                         </div>
-                        <div class="departures-list">
                 `;
 
-                direction. departures.forEach(dep => {
+                routeData.directions.forEach(direction => {
                     html += `
-                        <div class="departure-item">
-                            <span class="departure-time">${dep.startTime}</span>
-                            <span class="departure-vehicle">${dep.vehicleLabel}</span>
-                            ${dep. timestamp ? `<span class="departure-timestamp">Viđeno: ${dep.timestamp}</span>` : ''}
+                        <div class="direction-section">
+                            <div class="direction-header">
+                                <div class="direction-title">Smer (ide ka): ${direction.directionName}</div>
+                                <div class="direction-count">${direction.departures.length}</div>
+                            </div>
+                            <div class="departures-list">
+                    `;
+
+                    direction.departures.forEach(dep => {
+                        html += `
+                            <div class="departure-item">
+                                <span class="departure-time">${dep.startTime}</span>
+                                <span class="departure-vehicle">${dep.vehicleLabel}</span>
+                                ${dep.timestamp ? `<span class="departure-timestamp">Viđeno: ${dep.timestamp}</span>` : ''}
+                            </div>
+                        `;
+                    });
+
+                    html += `
+                            </div>
                         </div>
                     `;
                 });
 
-                html += `
-                        </div>
-                    </div>
-                `;
+                html += '</div>';
             });
 
-            html += '</div>';
             resultsContainer.innerHTML = html;
         }
 
@@ -540,7 +676,7 @@
                 // Pronađi sve polaske za dato vozilo (substring match)
                 const vehicleDepartures = [];
 
-                data.routes. forEach(route => {
+                data.routes.forEach(route => {
                     route.directions.forEach(direction => {
                         direction.departures.forEach(dep => {
                             if (dep.vehicleLabel && dep.vehicleLabel.includes(vehicleNumber)) {
@@ -557,7 +693,7 @@
                 });
 
                 if (vehicleDepartures.length === 0) {
-                    resultsContainer. innerHTML = `
+                    resultsContainer.innerHTML = `
                         <div class="no-data">
                             Vozilo "${vehicleNumber}" nije pronađeno u jučerašnjim podacima.<br>
                             <small style="color: #999; margin-top: 10px; display: block;">
@@ -569,12 +705,12 @@
                 }
 
                 // Sortiraj po vremenu
-                vehicleDepartures.sort((a, b) => a.vreme. localeCompare(b.vreme));
+                vehicleDepartures.sort((a, b) => a.vreme.localeCompare(b.vreme));
 
                 displayVehicleResults(vehicleNumber, vehicleDepartures);
 
             } catch (error) {
-                console. error('Greška:', error);
+                console.error('Greška:', error);
                 resultsContainer.innerHTML = '<div class="no-data">Greška pri učitavanju podataka</div>';
             }
         }
@@ -584,11 +720,11 @@
             
             // Grupiši po linijama za lepši prikaz
             const groupedByLine = {};
-            departures. forEach(dep => {
+            departures.forEach(dep => {
                 if (!groupedByLine[dep.linija]) {
-                    groupedByLine[dep. linija] = [];
+                    groupedByLine[dep.linija] = [];
                 }
-                groupedByLine[dep.linija]. push(dep);
+                groupedByLine[dep.linija].push(dep);
             });
 
             let html = `
@@ -596,7 +732,7 @@
                     <div class="route-header">
                         <div class="route-title">Vozilo: ${vehicleNumber}</div>
                         <div class="route-stats">
-                            ${Object.keys(groupedByLine).length} ${Object.keys(groupedByLine). length === 1 ? 'linija' : 'linija'} • 
+                            ${Object.keys(groupedByLine).length} ${Object.keys(groupedByLine).length === 1 ?  'linija' : 'linija'} • 
                             ${departures.length} ${departures.length === 1 ? 'polazak' : departures.length < 5 ? 'polaska' : 'polazaka'}
                         </div>
                     </div>
@@ -619,7 +755,7 @@
                         <div class="departure-item">
                             <span class="departure-time">${dep.vreme}</span>
                             <span class="departure-vehicle">→ ${dep.smer}</span>
-                            ${dep. timestamp ? `<span class="departure-timestamp">Viđeno: ${dep.timestamp}</span>` : ''}
+                            ${dep.timestamp ? `<span class="departure-timestamp">Viđeno: ${dep.timestamp}</span>` : ''}
                         </div>
                     `;
                 });
