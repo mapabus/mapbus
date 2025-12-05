@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Red Vožnje - Šumice → Prigradske linije</title>
+    <title>Red Vožnje - Šumice → Grocka</title>
     <style>
         * {
             margin: 0;
@@ -109,9 +109,9 @@
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        . search-box button:hover {
+        .search-box button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(30, 60, 114, 0. 4);
+            box-shadow: 0 6px 20px rgba(30, 60, 114, 0.4);
         }
 
         .clear-btn {
@@ -240,7 +240,7 @@
             transform: scale(1.05);
         }
 
-        .minute-badge . minute {
+        .minute-badge .minute {
             font-size: 16px;
             font-weight: bold;
         }
@@ -258,7 +258,7 @@
         .minute-badge.highlighted {
             background: #ffc107;
             color: #333;
-            animation: pulse 1. 5s infinite;
+            animation: pulse 1.5s infinite;
         }
 
         .minute-badge.highlighted .line-tag {
@@ -271,17 +271,17 @@
         }
 
         /* Boje za različite linije */
-        . minute-badge.line-351 { border-left: 4px solid #2196F3; }
+        .minute-badge.line-351 { border-left: 4px solid #2196F3; }
         .minute-badge.line-352 { border-left: 4px solid #4CAF50; }
         .minute-badge.line-352a { border-left: 4px solid #8BC34A; }
         .minute-badge.line-354 { border-left: 4px solid #FF9800; }
         .minute-badge.line-354b { border-left: 4px solid #FF5722; }
         .minute-badge.line-355a { border-left: 4px solid #9C27B0; }
-        . minute-badge.line-355b { border-left: 4px solid #E91E63; }
+        .minute-badge.line-355b { border-left: 4px solid #E91E63; }
         .minute-badge.line-356 { border-left: 4px solid #00BCD4; }
         .minute-badge.line-361 { border-left: 4px solid #3F51B5; }
         .minute-badge.line-363 { border-left: 4px solid #795548; }
-        .minute-badge. line-366 { border-left: 4px solid #607D8B; }
+        .minute-badge.line-366 { border-left: 4px solid #607D8B; }
 
         /* Tooltip / Oblačić */
         .tooltip {
@@ -317,7 +317,7 @@
             visibility: visible;
         }
 
-        . tooltip-vehicle {
+        .tooltip-vehicle {
             font-weight: bold;
             font-size: 16px;
         }
@@ -342,7 +342,7 @@
             margin-top: 20px;
         }
 
-        . legend-title {
+        .legend-title {
             font-weight: 600;
             color: #1e3c72;
             margin-bottom: 12px;
@@ -372,18 +372,18 @@
 
         .legend-color.c-351 { background: #2196F3; }
         .legend-color.c-352 { background: #4CAF50; }
-        . legend-color.c-352a { background: #8BC34A; }
-        .legend-color. c-354 { background: #FF9800; }
-        .legend-color. c-354b { background: #FF5722; }
-        .legend-color. c-355a { background: #9C27B0; }
+        .legend-color.c-352a { background: #8BC34A; }
+        .legend-color.c-354 { background: #FF9800; }
+        .legend-color.c-354b { background: #FF5722; }
+        .legend-color.c-355a { background: #9C27B0; }
         .legend-color.c-355b { background: #E91E63; }
         .legend-color.c-356 { background: #00BCD4; }
-        . legend-color.c-361 { background: #3F51B5; }
+        .legend-color.c-361 { background: #3F51B5; }
         .legend-color.c-363 { background: #795548; }
-        .legend-color. c-366 { background: #607D8B; }
-        .legend-color. c-highlight { background: #ffc107; }
+        .legend-color.c-366 { background: #607D8B; }
+        .legend-color.c-highlight { background: #ffc107; }
 
-        . stats-bar {
+        .stats-bar {
             display: flex;
             justify-content: center;
             gap: 30px;
@@ -419,7 +419,7 @@
                 min-width: 45px;
             }
             
-            . minute-badge .minute {
+            .minute-badge .minute {
                 font-size: 14px;
             }
             
@@ -433,7 +433,7 @@
     <div class="container">
         <div class="header">
             <h1>Red Vožnje</h1>
-            <p class="subtitle">Šumice → Prigradske destinacije</p>
+            <p class="subtitle">Šumice → Grocka</p>
             <div class="lines-badges">
                 <span class="line-badge">351</span>
                 <span class="line-badge">352</span>
@@ -466,7 +466,7 @@
         <div class="search-container">
             <div class="search-box">
                 <label for="vehicleSearch">🔍 Pretraga vozila:</label>
-                <input type="text" id="vehicleSearch" placeholder="Unesite broj vozila (npr. P71015)">
+                <input type="text" id="vehicleSearch" placeholder="Unesite broj vozila (npr.P71015)">
                 <button onclick="searchVehicle()">Pretraži</button>
                 <button class="clear-btn" onclick="clearSearch()">Obriši</button>
             </div>
@@ -537,7 +537,7 @@
                 // ============ 354 - Trajna jaruga okretnica (iz 35X.html) ============
                 { time: "06:10", vehicle: "P71012", line: "354", destination: "Trajna jaruga" },
 
-                // ============ 354b - Šumadijska (iz 35X. html) ============
+                // ============ 354b - Šumadijska (iz 35X.html) ============
                 { time: "05:30", vehicle: "P70148", line: "354b", destination: "Šumadijska" },
                 { time: "12:30", vehicle: "P70142", line: "354b", destination: "Šumadijska" },
                 { time: "17:50", vehicle: "P70146", line: "354b", destination: "Šumadijska" },
@@ -575,12 +575,12 @@
         // Uklanjanje duplikata (isto vreme + isto vozilo + ista linija)
         function removeDuplicates(data) {
             const seen = new Set();
-            return data. filter(dep => {
+            return data.filter(dep => {
                 const key = `${dep.time}-${dep.vehicle}-${dep.line}`;
                 if (seen.has(key)) {
                     return false;
                 }
-                seen. add(key);
+                seen.add(key);
                 return true;
             });
         }
@@ -599,7 +599,7 @@
                 if (!hourlyData[hour]) {
                     hourlyData[hour] = [];
                 }
-                hourlyData[hour].push({ minute, vehicle: dep. vehicle, line: dep.line, destination: dep.destination });
+                hourlyData[hour].push({ minute, vehicle: dep.vehicle, line: dep.line, destination: dep.destination });
             });
 
             // Sortiranje po satima
@@ -609,16 +609,16 @@
 
             let html = '';
             sortedHours.forEach(hour => {
-                const minutes = hourlyData[hour]. sort((a, b) => parseInt(a.minute) - parseInt(b. minute));
+                const minutes = hourlyData[hour].sort((a, b) => parseInt(a.minute) - parseInt(b.minute));
                 html += `
                     <div class="hour-row">
                         <div class="hour-cell">${hour}</div>
                         <div class="minutes-cell">
                             ${minutes.map(m => `
-                                <span class="minute-badge line-${m.line. replace(/\s/g, '')}" 
-                                      data-time="${hour}:${m. minute}" 
+                                <span class="minute-badge line-${m.line.replace(/\s/g, '')}" 
+                                      data-time="${hour}:${m.minute}" 
                                       data-vehicle="${m.vehicle}"
-                                      data-line="${m. line}"
+                                      data-line="${m.line}"
                                       data-destination="${m.destination}"
                                       onclick="toggleTooltip(event, this)">
                                     <span class="minute">${m.minute}</span>
@@ -646,7 +646,7 @@
             const allVehicles = new Set();
             const allLines = new Set();
             scheduleData.sumicePolasci.forEach(dep => {
-                allVehicles.add(dep. vehicle);
+                allVehicles.add(dep.vehicle);
                 allLines.add(dep.line);
             });
             document.getElementById('totalVehicles').textContent = allVehicles.size;
@@ -665,22 +665,22 @@
             }
             
             // Toggle trenutni
-            tooltip.classList. toggle('show');
-            activeTooltip = tooltip. classList.contains('show') ? tooltip : null;
+            tooltip.classList.toggle('show');
+            activeTooltip = tooltip.classList.contains('show') ? tooltip : null;
         }
 
         // Zatvori tooltip klikom bilo gde
-        document. addEventListener('click', function(e) {
+        document.addEventListener('click', function(e) {
             if (activeTooltip && ! e.target.closest('.minute-badge')) {
-                activeTooltip. classList.remove('show');
+                activeTooltip.classList.remove('show');
                 activeTooltip = null;
             }
         });
 
         // Pretraga vozila
         function searchVehicle() {
-            const query = document.getElementById('vehicleSearch').value.trim(). toUpperCase();
-            const resultsContainer = document. getElementById('searchResults');
+            const query = document.getElementById('vehicleSearch').value.trim().toUpperCase();
+            const resultsContainer = document.getElementById('searchResults');
 
             if (!query) {
                 resultsContainer.classList.remove('show');
@@ -689,22 +689,22 @@
 
             const allVehicles = new Map();
             
-            scheduleData. sumicePolasci.forEach(dep => {
-                if (dep.vehicle. toUpperCase().includes(query)) {
-                    if (!allVehicles.has(dep. vehicle)) {
-                        allVehicles.set(dep. vehicle, 0);
+            scheduleData.sumicePolasci.forEach(dep => {
+                if (dep.vehicle.toUpperCase().includes(query)) {
+                    if (!allVehicles.has(dep.vehicle)) {
+                        allVehicles.set(dep.vehicle, 0);
                     }
-                    allVehicles.set(dep.vehicle, allVehicles. get(dep.vehicle) + 1);
+                    allVehicles.set(dep.vehicle, allVehicles.get(dep.vehicle) + 1);
                 }
             });
 
             if (allVehicles.size === 0) {
                 resultsContainer.innerHTML = '<div class="search-result-item"><span>Vozilo nije pronađeno</span></div>';
-                resultsContainer.classList. add('show');
+                resultsContainer.classList.add('show');
                 return;
             }
 
-            const sortedVehicles = [... allVehicles. entries()].sort((a, b) => b[1] - a[1]);
+            const sortedVehicles = [...allVehicles.entries()].sort((a, b) => b[1] - a[1]);
 
             let html = '';
             sortedVehicles.forEach(([vehicle, count]) => {
@@ -726,9 +726,9 @@
                 b.classList.remove('highlighted');
             });
 
-            document.querySelectorAll('.minute-badge'). forEach(b => {
-                if (b.dataset. vehicle === vehicle) {
-                    b. classList.add('highlighted');
+            document.querySelectorAll('.minute-badge').forEach(b => {
+                if (b.dataset.vehicle === vehicle) {
+                    b.classList.add('highlighted');
                 }
             });
 
@@ -751,7 +751,7 @@
 
         // Live pretraga
         document.getElementById('vehicleSearch').addEventListener('input', function() {
-            if (this.value. length >= 2) {
+            if (this.value.length >= 2) {
                 searchVehicle();
             } else {
                 document.getElementById('searchResults').classList.remove('show');
