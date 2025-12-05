@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<! DOCTYPE html>
 <html lang="sr">
 <head>
     <script src="/auth-check.js"></script>
@@ -52,23 +52,30 @@
         }
 
         .search-box {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 30px;
-            align-items: flex-end;
-            flex-wrap: wrap;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
-        .search-group-wrapper {
+        .search-column {
             display: flex;
-            gap: 15px;
-            align-items: flex-end;
-            flex: 1;
-            min-width: 300px;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        .search-group-wrapper .search-group {
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-wrapper input[type="text"] {
             flex: 1;
+        }
+
+        .input-wrapper button {
+            flex-shrink: 0;
         }
 
         .search-group {
@@ -83,15 +90,16 @@
             font-size: 14px;
         }
 
-        input {
+        input[type="text"] {
             padding: 12px 18px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 16px;
             transition: all 0.3s;
+            width: 100%;
         }
 
-        input:focus {
+        input[type="text"]:focus {
             outline: none;
             border-color: #1e3c72;
             box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
@@ -122,7 +130,6 @@
         .radio-group {
             display: flex;
             gap: 20px;
-            margin-top: 10px;
             flex-wrap: wrap;
         }
 
@@ -148,11 +155,11 @@
         .search-type-info {
             background: #e3f2fd;
             border-left: 4px solid #1e3c72;
-            padding: 12px 15px;
+            padding: 10px 12px;
             border-radius: 6px;
-            margin-top: 15px;
-            font-size: 13px;
+            font-size: 12px;
             color: #555;
+            line-height: 1.4;
         }
 
         .search-type-info strong {
@@ -261,6 +268,13 @@
             font-weight: 500;
         }
 
+        .departure-timestamp {
+            color: #999;
+            font-size: 12px;
+            font-style: italic;
+            margin-left: auto;
+        }
+
         .no-data {
             text-align: center;
             padding: 60px 20px;
@@ -327,61 +341,12 @@
             font-size: 14px;
         }
 
-        @media (max-width: 768px) {
-            .search-box {
-                flex-direction: column;
-                gap: 20px;
-            }
-
-            .search-group-wrapper {
-                flex-direction: column;
-                width: 100%;
-                min-width: unset;
-            }
-
-            .search-group-wrapper .search-group {
-                width: 100%;
-            }
-
-            .search-group-wrapper button {
-                width: 100%;
-            }
-
-            .radio-group {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .departures-list {
-                gap: 10px;
-            }
-
-            .departure-item {
-                padding: 8px 12px;
-            }
-
-            .departure-time {
-                font-size: 16px;
-            }
-
-            .departure-vehicle {
-                font-size: 14px;
-            }
-
-            .route-title {
-                font-size: 20px;
-            }
-
-            .direction-title {
-                font-size: 16px;
-            }
-        }
-
         .button-container {
             display: flex;
             flex-direction: column;
             gap: 20px;
             align-items: center;
+            margin-top: 20px;
         }
 
         .btn {
@@ -401,30 +366,63 @@
         .btn:hover {
             transform: translateY(-3px);
             box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
         }
 
         .btn:active {
             transform: translateY(-1px);
         }
 
-        .btn-admin {
-            background: #2c3e50;
-            color: white;
-            display: none;
+        @media (max-width: 968px) {
+            .search-box {
+                grid-template-columns: 1fr;
+                gap: 25px;
+            }
         }
 
-        .btn-admin:hover {
-            background: #34495e;
-        }
+        @media (max-width: 768px) {
+            .input-wrapper {
+                flex-direction: column;
+            }
 
-        .btn-admin.has-pending {
-            background: #e74c3c;
-            animation: pulse 2s infinite;
-        }
+            .input-wrapper button {
+                width: 100%;
+            }
 
-        .btn-admin.has-pending:hover {
-            background: #c0392b;
+            .radio-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .departures-list {
+                gap: 10px;
+            }
+
+            .departure-item {
+                padding: 8px 12px;
+                flex-wrap: wrap;
+            }
+
+            .departure-time {
+                font-size: 16px;
+            }
+
+            .departure-vehicle {
+                font-size: 14px;
+            }
+
+            .departure-timestamp {
+                width: 100%;
+                margin-left: 0;
+                margin-top: 5px;
+            }
+
+            .route-title {
+                font-size: 20px;
+            }
+
+            .direction-title {
+                font-size: 16px;
+            }
         }
     </style>
 </head>
@@ -436,56 +434,57 @@
 
         <div class="search-container">
             <div class="search-box">
-                <!-- Grupa za liniju -->
-                <div class="search-group-wrapper">
-                    <div class="search-group">
-                        <label for="lineSearch">Broj linije:</label>
+                <!-- Leva kolona - Pretraga po liniji -->
+                <div class="search-column">
+                    <label for="lineSearch">Broj linije:</label>
+                    <div class="input-wrapper">
                         <input 
                             type="text" 
                             id="lineSearch" 
                             placeholder="Unesite broj linije (npr.601)"
                         >
-                        <div class="radio-group">
-                            <div class="radio-option">
-                                <input 
-                                    type="radio" 
-                                    id="exactMatch" 
-                                    name="searchType" 
-                                    value="exact" 
-                                    checked
-                                >
-                                <label for="exactMatch">Tačan naziv</label>
-                            </div>
-                            <div class="radio-option">
-                                <input 
-                                    type="radio" 
-                                    id="partialMatch" 
-                                    name="searchType" 
-                                    value="partial"
-                                >
-                                <label for="partialMatch">Delimična pretraga</label>
-                            </div>
+                        <button id="lineSearchBtn">Pretraži liniju</button>
+                    </div>
+                    <div class="radio-group">
+                        <div class="radio-option">
+                            <input 
+                                type="radio" 
+                                id="exactMatch" 
+                                name="searchType" 
+                                value="exact" 
+                                checked
+                            >
+                            <label for="exactMatch">Tačan naziv</label>
                         </div>
-                        <div class="search-type-info" id="searchTypeInfo">
-                            <strong>Tačan naziv:</strong> Pronalazi samo liniju sa tačno unetim brojem
+                        <div class="radio-option">
+                            <input 
+                                type="radio" 
+                                id="partialMatch" 
+                                name="searchType" 
+                                value="partial"
+                            >
+                            <label for="partialMatch">Delimična pretraga</label>
                         </div>
                     </div>
-                    <button id="lineSearchBtn">Pretraži liniju</button>
+                    <div class="search-type-info" id="searchTypeInfo">
+                        <strong>Tačan naziv:</strong> Pronalazi samo liniju sa tačno unetim brojem
+                    </div>
                 </div>
 
-                <!-- Grupa za vozilo -->
-                <div class="search-group-wrapper">
-                    <div class="search-group">
-                        <label for="vehicleSearch">Broj vozila:</label>
+                <!-- Desna kolona - Pretraga po vozilu -->
+                <div class="search-column">
+                    <label for="vehicleSearch">Broj vozila:</label>
+                    <div class="input-wrapper">
                         <input 
                             type="text" 
                             id="vehicleSearch" 
                             placeholder="npr.P70618"
                         >
+                        <button id="vehicleSearchBtn">Pretraži vozilo</button>
                     </div>
-                    <button id="vehicleSearchBtn">Pretraži vozilo</button>
                 </div>
             </div>
+
             <div class="button-container">
                 <a href="juce.html" class="btn">Jučešnji Podaci</a>
             </div>
@@ -527,7 +526,7 @@
                 if (exactMatch.checked) {
                     searchTypeInfo.innerHTML = '<strong>Tačan naziv:</strong> Pronalazi samo liniju sa tačno unetim brojem';
                 } else {
-                    searchTypeInfo.innerHTML = '<strong>Delimična pretraga:</strong> Pronalazi sve linije koje sadrže uneti tekst (npr."493" → 493, 493A, 493B; "N" → 16N, 27N, 33N)';
+                    searchTypeInfo.innerHTML = '<strong>Delimična pretraga:</strong> Pronalazi sve linije koje sadrže uneti tekst (npr."493" → 493, 493A, 493B; "N" → 18N, 27N, 33N)';
                 }
             }
         });
@@ -740,7 +739,7 @@
                     <div class="route-header">
                         <div class="route-title">Vozilo: ${vehicleNumber}</div>
                         <div class="route-stats">
-                            ${Object.keys(groupedByLine).length} ${Object.keys(groupedByLine).length === 1 ?  'linija' : 'linija'} • 
+                            ${Object.keys(groupedByLine).length} ${Object.keys(groupedByLine).length === 1 ? 'linija' : 'linija'} • 
                             ${departures.length} ${departures.length === 1 ? 'polazak' : departures.length < 5 ? 'polaska' : 'polazaka'}
                         </div>
                     </div>
