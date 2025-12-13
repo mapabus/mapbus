@@ -66,6 +66,7 @@ export default async function handler(req, res) {
       }
 
       // Process trip updates
+      // Process trip updates
       if (entitet.tripUpdate && entitet.tripUpdate.trip && 
           entitet.tripUpdate.stopTimeUpdate && entitet.tripUpdate.vehicle) {
         const updates = entitet.tripUpdate.stopTimeUpdate;
@@ -73,13 +74,20 @@ export default async function handler(req, res) {
 
         if (updates.length > 0 && vehicleId) {
           const lastStopId = updates[updates.length - 1].stopId;
+          
+          // Extract delay from first stop
+          let delay = undefined;
+          if (updates[0].arrival && updates[0].arrival.delay !== undefined) {
+            delay = updates[0].arrival.delay;
+          }
+          
           tripUpdates.push({
             vehicleId: vehicleId,
-            destination: lastStopId
+            destination: lastStopId,
+            delay: delay
           });
         }
       }
-    });
 
     res.status(200).json({
       vehicles: vehicles,
