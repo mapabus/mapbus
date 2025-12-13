@@ -531,39 +531,6 @@ export default function handler(req, res) {
             let destinations = new Set();
             let destinationInfo = {};
  
-            vozila.forEach(v => {
-                const route = normalizeRouteId(v.routeId);
-                const vehicleId = v.id;
-                
-                const destId = vehicleDestinations[id] || "Unknown";
-                const normalizedId = normalizeStopId(destId);
-                const station = stationsMap[normalizedId];
-                const destName = station ? station.name : destId;
-                
-                const delay = vehicleDelays[id];
-                let delayText = '';
-                
-                if (delay !== undefined) {
-                    const absDelay = Math.abs(delay);
-                    let delayDisplay = '';
-                    
-                    if (absDelay >= 60) {
-                        const minutes = Math.floor(absDelay / 60);
-                        const seconds = absDelay % 60;
-                        delayDisplay = `${minutes}m ${seconds}s`;
-                    } else {
-                        delayDisplay = `${absDelay}s`;
-                    }
-                    
-                    if (delay < 0) {
-                        delayText = `<div class="popup-row"><span class="popup-label">Kašnjenje po turaži:</span> <span style="color:#27ae60; font-weight:bold;">${delayDisplay} - stiže ranije</span></div>`;
-                    } else {
-                        delayText = `<div class="popup-row"><span class="popup-label">Kašnjenje po turaži:</span> <span style="color:#e74c3c; font-weight:bold;">${delayDisplay}</span></div>`;
-                    }
-                }
-                
-                const uniqueDirKey = `${route}_${destId}`;
-                const color = directionColorMap[uniqueDirKey];
                 
                 destinations.add(destId);
                 destinationInfo[destId] = {
@@ -619,6 +586,29 @@ export default function handler(req, res) {
                 const normalizedId = normalizeStopId(destId);
                 const station = stationsMap[normalizedId];
                 const destName = station ? station.name : destId;
+                
+                // Dodaj delay logiku OVDE
+                const delay = vehicleDelays[id];
+                let delayText = '';
+                
+                if (delay !== undefined) {
+                    const absDelay = Math.abs(delay);
+                    let delayDisplay = '';
+                    
+                    if (absDelay >= 60) {
+                        const minutes = Math.floor(absDelay / 60);
+                        const seconds = absDelay % 60;
+                        delayDisplay = \`\${minutes}m \${seconds}s\`;
+                    } else {
+                        delayDisplay = \`\${absDelay}s\`;
+                    }
+                    
+                    if (delay < 0) {
+                        delayText = \`<div class="popup-row"><span class="popup-label">Kašnjenje po turaži:</span> <span style="color:#27ae60; font-weight:bold;">\${delayDisplay} - stiže ranije</span></div>\`;
+                    } else {
+                        delayText = \`<div class="popup-row"><span class="popup-label">Kašnjenje po turaži:</span> <span style="color:#e74c3c; font-weight:bold;">\${delayDisplay}</span></div>\`;
+                    }
+                }
                 
                 const uniqueDirKey = \`\${route}_\${destId}\`;
                 const color = directionColorMap[uniqueDirKey];
