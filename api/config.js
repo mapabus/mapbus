@@ -4,7 +4,7 @@ export default function handler(req, res) {
   if (!isAuthenticated) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  res.setHeader('Access-Control-Allow-Origin', '*');
+
   res.setHeader('Content-Type', 'application/json');
 
 
