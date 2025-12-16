@@ -351,10 +351,6 @@ export async function onRequest(context) {
         </div>
     </div>
 
-    <div class="refresh-indicator" id="refreshIndicator">
-        <span>🔄</span>
-        <span>Ažuriram podatke...</span>
-    </div>
 
     <script>
         let allData = [];
@@ -397,7 +393,7 @@ export async function onRequest(context) {
             } catch (error) {
                 console.error('Greška:', error);
                 if (!silent) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="no-data">❌ Greška pri učitavanju podataka</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="no-data">Greška pri učitavanju podataka</td></tr>';
                 }
             } finally {
                 setTimeout(() => {
@@ -517,4 +513,5 @@ export async function onRequest(context) {
     status: 200,
     headers: { 'Content-Type': 'text/html; charset=utf-8' }
   });
+
 }
