@@ -1,40 +1,5 @@
 async function getAccessToken(context) {
-  const header = { alg: 'RS256', typ: 'JWT' };
-  const claim = {
-    iss: context.env.GOOGLE_SHEETS_CLIENT_EMAIL,
-    scope: 'https://www.googleapis.com/auth/spreadsheets',
-    aud: 'https://oauth2.googleapis.com/token',
-    exp: Math.floor(Date.now() / 1000) + 3600,
-    iat: Math.floor(Date.now() / 1000)
-  };
-
-  const encode = (obj) => btoa(JSON.stringify(obj)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-
-  const signatureInput = `${encode(header)}.${encode(claim)}`;
-
-  const key = await crypto.subtle.importKey(
-    'pkcs8',
-    Uint8Array.from(atob(context.env.GOOGLE_SHEETS_PRIVATE_KEY.replace(/\\n/g, '\n').replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----/g, '').trim()), c => c.charCodeAt(0)),
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-
-  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(signatureInput));
-  const jwt = `${signatureInput}.${encode(Array.from(new Uint8Array(signature)))}`;
-
-  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
-  });
-
-  if (!tokenResponse.ok) {
-    throw new Error('Failed to get access token');
-  }
-
-  const { access_token } = await tokenResponse.json();
-  return access_token;
+  // Isti helper
 }
 
 export async function onRequest(context) {
@@ -69,11 +34,10 @@ export async function onRequest(context) {
       console.log('No data in Polasci sheet or sheet does not exist');
     }
 
-    // Get spreadsheet metadata to find sheet IDs
-    const spreadsheet = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
+    let spreadsheetResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
       headers: { Authorization: `Bearer ${access_token}` }
     });
-    const spreadsheetData = await spreadsheet.json();
+    const spreadsheetData = await spreadsheetResponse.json();
 
     let juceSheetId = null;
     const existingJuceSheet = spreadsheetData.sheets.find(s => s.properties.title === juceSheetName);
@@ -250,11 +214,7 @@ export async function onRequest(context) {
 
     console.log('=== Departures Reset Complete ===');
 
-    return new Response(
-      `SUCCESS - Departures reset at ${timestamp} | ` +
-      `Saved ${polasciData.length} rows to Juce sheet`,
-      { status: 200 }
-    );
+    return new Response(`SUCCESS - Departures reset at ${timestamp} | Saved ${polasciData.length} rows to Juce sheet`, { status: 200 });
 
   } catch (error) {
     console.error('Unexpected error:', error);
@@ -268,9 +228,6 @@ export async function onRequest(context) {
       second: '2-digit'
     });
     
-    return new Response(
-      `ERROR - Reset failed at ${timestamp}: ${error.message}`,
-      { status: 500 }
-    );
+    return new Response(`ERROR - Reset failed at ${timestamp}: ${error.message}`, { status: 500 });
   }
 }
