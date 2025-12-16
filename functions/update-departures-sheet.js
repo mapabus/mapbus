@@ -23,14 +23,14 @@ export async function onRequest(context) {
     try {
       const auth = new google.auth.GoogleAuth({
         credentials: {
-          client_email: process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
-          private_key: process.env.GOOGLE_SHEETS_PRIVATE_KEY.replace(/\\n/g, '\n'),
+          client_email: context.env.GOOGLE_SHEETS_CLIENT_EMAIL,
+          private_key: context.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
         },
         scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
       });
 
       const sheets = google.sheets({ version: 'v4', auth });
-      const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
+      const spreadsheetId = context.env.GOOGLE_SPREADSHEET_ID;
 
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId,
@@ -98,14 +98,14 @@ export async function onRequest(context) {
   try {
     const auth = new google.auth.GoogleAuth({
       credentials: {
-        client_email: process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_SHEETS_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        client_email: context.env.GOOGLE_SHEETS_CLIENT_EMAIL,
+        private_key: context.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       },
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
     const sheets = google.sheets({ version: 'v4', auth });
-    const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
+    const spreadsheetId = context.env.GOOGLE_SPREADSHEET_ID;
 
     console.log('Reading from Baza sheet...');
     const bazaResponse = await sheets.spreadsheets.values.get({
@@ -407,7 +407,7 @@ export async function onRequest(context) {
 
       const directions = routeStructure.get(route);
       const sortedDirections = Array.from(directions.keys()).sort();
-
+      
       for (const direction of sortedDirections) {
         allRows.push([`Smer: ${direction}`]);
         formatRequests.push({
@@ -434,22 +434,16 @@ export async function onRequest(context) {
 
         currentRow++;
 
-        allRows.push(['Polazak', 'Vozilo', 'Vreme upisa']);
-
-        currentRow++;
-
         const departures = directions.get(direction);
         departures.forEach(dep => {
-          allRows.push([dep.startTime, dep.vehicleLabel, dep.timestamp]);
+          allRows.push([
+            dep.startTime,
+            dep.vehicleLabel,
+            dep.timestamp
+          ]);
           currentRow++;
         });
-
-        allRows.push([]); // Prazan red između smerova
-        currentRow++;
       }
-
-      allRows.push([]); // Prazan red između linija
-      currentRow++;
     }
 
     await sheets.spreadsheets.values.clear({
@@ -473,21 +467,18 @@ export async function onRequest(context) {
       }
     });
 
-    console.log('=== Update Complete ===');
-
     return new Response(JSON.stringify({
       success: true,
       newDepartures: newCount,
       updatedDepartures: updatedCount,
-      totalRoutes: routeStructure.size
+      totalRoutes: sortedRoutes.length
     }), { status: 200, headers });
 
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('Update error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: 'Unexpected error',
-      details: error.message
+      error: error.message
     }), { status: 500, headers });
   }
 }
