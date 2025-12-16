@@ -386,9 +386,9 @@ export async function onRequest(context) {
                     renderTable(allData);
                     updateStats(allData);
                     
-                    console.log(`Ucitano ${allData.length} vozila iz baze`);
+                    console.log(\`Ucitano \${allData.length} vozila iz baze\`);
                 } else {
-                    tbody.innerHTML = `<tr><td colspan="5" class="no-data">${data.message || 'Nema podataka'}</td></tr>`;
+                    tbody.innerHTML = \`<tr><td colspan="5" class="no-data">\${data.message || 'Nema podataka'}</td></tr>\`;
                 }
             } catch (error) {
                 console.error('Greska:', error);
@@ -419,102 +419,13 @@ export async function onRequest(context) {
                 } else if (sortBy === 'recent') {
                     // Sortiraj po timestamp-u (najnoviji prvo)
                     return b.timestamp.localeCompare(a.timestamp);
-                } else if (sortBy === 'newest') {
-                    // Sortiraj po redosledu iz Sheet-a (poslednje prvo)
-                    return b.rowIndex - a.rowIndex;
-                } else {
-                    const numA = parseInt(a.vozilo.replace(/\D/g, '')) || 0;
-                    const numB = parseInt(b.vozilo.replace(/\D/g, '')) || 0;
-                    return numA - numB;
                 }
             });
-
-            tbody.innerHTML = sortedData.map(vehicle => {
-                // Proveri koliko je vozilo staro
-                const lastSeen = new Date(vehicle.timestamp.split(',').join(''));
-                const now = new Date();
-                const diffHours = (now - lastSeen) / (1000 * 60 * 60);
-                
-                let timestampStyle = '';
-                if (diffHours < 1) {
-                    timestampStyle = 'color: #28a745; font-weight: bold;'; // Zeleno - aktivno
-                } else if (diffHours < 24) {
-                    timestampStyle = 'color: #ffc107;'; // zuto - danas
-                } else {
-                    timestampStyle = 'color: #999;'; // Sivo - staro
-                }
-
-                return `
-                    <tr>
-                        <td><strong>${vehicle.vozilo}</strong></td>
-                        <td>${vehicle.linija}</td>
-                        <td>${vehicle.polazak}</td>
-                        <td>${vehicle.smer}</td>
-                        <td><small style="${timestampStyle}">${vehicle.timestamp}</small></td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-        function filterTable() {
-            const vehicleSearch = document.getElementById('searchVehicle').value.toLowerCase();
-            const routeSearch = document.getElementById('searchRoute').value.toLowerCase();
-            const departureSearch = document.getElementById('searchDeparture').value.toLowerCase();
-            const directionSearch = document.getElementById('searchDirection').value.toLowerCase();
-
-            const filtered = allData.filter(vehicle => {
-                const vehicleMatch = vehicle.vozilo.toLowerCase().includes(vehicleSearch);
-                const departureMatch = vehicle.polazak.toLowerCase().includes(departureSearch);
-                const directionMatch = vehicle.smer.toLowerCase().includes(directionSearch);
-                
-                // Posebna logika za liniju
-                let routeMatch = true;
-                if (routeSearch) {
-                    const linija = vehicle.linija.toLowerCase();
-                    
-                    // Ako trazimo samo broj (samo cifre)
-                    if (/^\d+$/.test(routeSearch)) {
-                        // TAcNO poklapanje - samo linija bez slova
-                        routeMatch = linija === routeSearch;
-                    } 
-                    // Ako trazimo slovo (npr. "N")
-                    else if (/^[a-z]$/i.test(routeSearch)) {
-                        // Poklapa se ako linija sadrzi to slovo
-                        routeMatch = linija.includes(routeSearch);
-                    }
-                    // Ako trazimo broj sa slovom (npr. "860A")
-                    else {
-                        // Tacno poklapanje
-                        routeMatch = linija === routeSearch;
-                    }
-                }
-
-                return vehicleMatch && routeMatch && departureMatch && directionMatch;
-            });
-
-            renderTable(filtered);
-            updateStats(filtered);
-        }
-
-        function updateStats(data) {
-            document.getElementById('totalVehicles').textContent = data.length;
-            
-            const uniqueRoutes = new Set(data.map(v => v.linija));
-            document.getElementById('totalRoutes').textContent = uniqueRoutes.size;
-        }
-
-        // Inicijalizacija
-        loadData(false);
-    </script>
+        </script>
 </body>
-</html>
-`;
+</html>`;
   return new Response(html, {
     status: 200,
     headers: { 'Content-Type': 'text/html; charset=utf-8' }
   });
-
 }
-
-
-
