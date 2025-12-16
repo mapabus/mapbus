@@ -1,5 +1,6 @@
-name = "mapbus"  # Optional for Pages, but keep if you have it
+name = "mapbus"
 
 pages_build_output_dir = "."
 
+compatibility_date = "2025-12-16"
 compatibility_flags = ["nodejs_compat_v2"]
