@@ -134,7 +134,7 @@ export async function onRequest(context) {
     <script>
 
         const map = L.map('map', { zoomControl: false }).setView([44.8125, 20.4612], 13);
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        L.tileLayer('https://\{s\}.basemaps.cartocdn.com/rastertiles/voyager/\{z\}/\{x\}/\{y\}\{r\}.png', {
             attribution: '&copy; CARTO, &copy; OpenStreetMap contributors',
             maxZoom: 20
         }).addTo(map);
@@ -241,11 +241,11 @@ export async function onRequest(context) {
         async function loadStations() {
             try {
                 const response = await fetch('/api/stations');
-                if (!response.ok) throw new Error("Greška pri učitavanju stanica");
+                if (!response.ok) throw new Error("Greska pri ucitavanju stanica");
                 stationsMap = await response.json();
-                console.log(\`✓ Učitano stanica: \${Object.keys(stationsMap).length}\`);
+                console.log(\`Ucitano stanica: \${Object.keys(stationsMap).length}\`);
             } catch (error) {
-                console.error("Greška pri učitavanju stanica:", error);
+                console.error("Greska pri ucitavanju stanica:", error);
             }
         }
 
@@ -256,14 +256,14 @@ export async function onRequest(context) {
         async function loadRouteNames() {
             try {
                 const response = await fetch('/route-mapping.json');
-                if (!response.ok) throw new Error("Greška pri učitavanju naziva linija");
+                if (!response.ok) throw new Error("Greska pri ucitavanju naziva linija");
                 const routeMapping = await response.json();
                 
-                console.log("✓ Učitano naziva linija:", Object.keys(routeMapping).length);
+                console.log("Ucitano naziva linija:", Object.keys(routeMapping).length);
                 
                 routeNamesMap = routeMapping;
             } catch (error) {
-                console.error(" Greška pri učitavanju naziva linija:", error);
+                console.error("Greska pri ucitavanju naziva linija:", error);
             }
         }
 
@@ -283,7 +283,7 @@ export async function onRequest(context) {
                 parseShapesCSV(shapesText);
                 parseShapesCSV(shapesGradskeText);
                 
-                console.log('✓ Shapes loaded:', Object.keys(shapesData).length);
+                console.log('Shapes loaded:', Object.keys(shapesData).length);
             } catch (error) {
                 console.error('Error loading shapes:', error);
             }
@@ -375,7 +375,7 @@ export async function onRequest(context) {
                 shapeToColorMapGlobal = {};
                 vehicleShapeMap = {};
 
-                document.getElementById('statusText').innerText = 'Učitavam podatke...';
+                document.getElementById('statusText').innerText = 'Ucitavam podatke...';
                 document.getElementById('countdown').innerText = '--';
                 clearInterval(countdownId);
 
@@ -386,7 +386,7 @@ export async function onRequest(context) {
 
                 const linesQuery = izabraneLinije.join(',');
                 const response = await fetch(\`/api/vehicles?lines=\${linesQuery}\`);
-                if (!response.ok) throw new Error('Greška pri učitavanju vozila');
+                if (!response.ok) throw new Error('Greska pri ucitavanju vozila');
 
                 const data = await response.json();
                 if (!data.vehicles || data.vehicles.length === 0) {
@@ -471,7 +471,7 @@ export async function onRequest(context) {
                         });
 
                         const destMarker = L.marker(destCoords, { icon: destIcon }).addTo(destinationLayer);
-                        destMarker.bindPopup(`Smer: \${destName}<br>Linija: \${routeDisplayName}`);
+                        destMarker.bindPopup(\`Smer: \${destName}<br>Linija: \${routeDisplayName}\`);
                         bounds.extend(destCoords);
                     }
 
@@ -504,7 +504,7 @@ export async function onRequest(context) {
                 startCountdown();
 
             } catch (error) {
-                document.getElementById('statusText').innerText = 'Greška pri učitavanju';
+                document.getElementById('statusText').innerText = 'Greska pri ucitavanju';
                 console.error(error);
             }
         }
@@ -590,5 +590,4 @@ export async function onRequest(context) {
     status: 200,
     headers: { 'Content-Type': 'text/html; charset=utf-8' }
   });
-
 }
