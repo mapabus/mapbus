@@ -245,7 +245,7 @@ export async function onRequest(context) {
                 stationsMap = await response.json();
                 console.log(\`✓ Učitano stanica: \${Object.keys(stationsMap).length}\`);
             } catch (error) {
-                console.error("❌ Greška pri učitavanju stanica:", error);
+                console.error("Greška pri učitavanju stanica:", error);
             }
         }
 
@@ -263,7 +263,7 @@ export async function onRequest(context) {
                 
                 routeNamesMap = routeMapping;
             } catch (error) {
-                console.error("❌ Greška pri učitavanju naziva linija:", error);
+                console.error(" Greška pri učitavanju naziva linija:", error);
             }
         }
 
@@ -285,7 +285,7 @@ export async function onRequest(context) {
                 
                 console.log('✓ Shapes loaded:', Object.keys(shapesData).length);
             } catch (error) {
-                console.error('❌ Error loading shapes:', error);
+                console.error('Error loading shapes:', error);
             }
         }
 
@@ -590,4 +590,5 @@ export async function onRequest(context) {
     status: 200,
     headers: { 'Content-Type': 'text/html; charset=utf-8' }
   });
+
 }
