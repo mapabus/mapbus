@@ -156,24 +156,15 @@ export async function onRequest(context) {
 
     const ip = req.headers.get('CF-Connecting-IP') || 'unknown';
 
-    // ====== REGISTRACIJA ======
     if (action === 'register') {
       if (!captcha || captcha.trim() === '') {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          message: 'Molimo potvrdite da niste robot' 
-        }), { status: 400, headers });
+        return new Response(JSON.stringify({ success: false, message: 'Molimo potvrdite da niste robot' }), { status: 400, headers });
       }
 
-      const existingUser = users.find(u => 
-        u.username.toLowerCase() === username.toLowerCase()
-      );
+      const existingUser = users.find(u => u.username.toLowerCase() === username.toLowerCase());
 
       if (existingUser) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          message: 'Korisničko ime već postoji' 
-        }), { status: 400, headers });
+        return new Response(JSON.stringify({ success: false, message: 'Korisničko ime već postoji' }), { status: 400, headers });
       }
 
       const now = new Date().toLocaleString('sr-RS', { timeZone: 'Europe/Belgrade' });
@@ -187,21 +178,14 @@ export async function onRequest(context) {
         })
       });
 
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'Zahtev za registraciju poslat!  Čekajte odobrenje.' 
-      }), { status: 200, headers });
+      return new Response(JSON.stringify({ success: true, message: 'Zahtev za registraciju poslat!  Čekajte odobrenje.' }), { status: 200, headers });
     }
 
-    // ====== LOGIN ======
     if (action === 'login') {
       const user = users.find(u => u.username === username);
 
       if (!user) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          message: 'Pogrešno korisničko ime ili lozinka' 
-        }), { status: 401, headers });
+        return new Response(JSON.stringify({ success: false, message: 'Pogrešno korisničko ime ili lozinka' }), { status: 401, headers });
       }
 
       let isPasswordValid = false;
@@ -215,17 +199,11 @@ export async function onRequest(context) {
       }
 
       if (!isPasswordValid) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          message: 'Pogrešno korisničko ime ili lozinka' 
-        }), { status: 401, headers });
+        return new Response(JSON.stringify({ success: false, message: 'Pogrešno korisničko ime ili lozinka' }), { status: 401, headers });
       }
 
       if (user.status !== 'approved') {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          message: user.status === 'rejected' ? 'Nalog je odbijen' : 'Nalog još nije odobren' 
-        }), { status: 403, headers });
+        return new Response(JSON.stringify({ success: false, message: user.status === 'rejected' ? 'Nalog je odbijen' : 'Nalog još nije odobren' }), { status: 403, headers });
       }
 
       const userIdx = users.findIndex(u => u.username === username);
@@ -248,16 +226,9 @@ export async function onRequest(context) {
 
       const authToken = btoa(`${username}:${Date.now()}`);
 
-      return new Response(JSON.stringify({ 
-        success: true, 
-        message: 'Uspešna prijava',
-        token: authToken,
-        username: username,
-        isAdmin: user.isAdmin
-      }), { status: 200, headers });
+      return new Response(JSON.stringify({ success: true, message: 'Uspešna prijava', token: authToken, username: username, isAdmin: user.isAdmin }), { status: 200, headers });
     }
 
-    // ====== PROVERA TOKENA ======
     if (action === 'verify') {
       if (!token) {
         return new Response(JSON.stringify({ success: false, message: 'Nema tokena' }), { status: 401, headers });
@@ -295,7 +266,6 @@ export async function onRequest(context) {
       }
     }
 
-    // ====== LISTA KORISNIKA (za admin) ======
     if (action === 'listUsers') {
       if (!token) {
         return new Response(JSON.stringify({ success: false, message: 'Neautorizovan pristup' }), { status: 401, headers });
@@ -326,7 +296,6 @@ export async function onRequest(context) {
       return new Response(JSON.stringify({ success: true, users: sanitizedUsers }), { status: 200, headers });
     }
 
-    // ====== AŽURIRANJE STATUSA (za admin) ======
     if (action === 'updateStatus') {
       if (!token) {
         return new Response(JSON.stringify({ success: false, message: 'Neautorizovan pristup' }), { status: 401, headers });
@@ -359,7 +328,6 @@ export async function onRequest(context) {
       return new Response(JSON.stringify({ success: true, message: 'Status ažuriran' }), { status: 200, headers });
     }
 
-    // ====== UČITAVANJE KORISNIČKIH PODATAKA ======
     if (action === 'getUserData') {
       if (!token) {
         return new Response(JSON.stringify({ success: false, message: 'Nema tokena' }), { status: 401, headers });
@@ -380,10 +348,43 @@ export async function onRequest(context) {
           return new Response(JSON.stringify({ success: false, message: 'Token je istekao' }), { status: 401, headers });
         }
 
-        return new Response(JSON.stringify({ 
-          success: true, 
-          username: tokenUsername,
-        }), { status: 200, headers });
+        return new Response(JSON.stringify({ success: true, username: tokenUsername, favorites: user.favorites || '' }), { status: 200, headers });
+      } catch (e) {
+        return new Response(JSON.stringify({ success: false, message: 'Nevažeći token' }), { status: 401, headers });
+      }
+    }
+
+    if (action === 'saveFavorites') {
+      if (!token) {
+        return new Response(JSON.stringify({ success: false, message: 'Nema tokena' }), { status: 401, headers });
+      }
+
+      try {
+        const decoded = atob(token);
+        const [tokenUsername, timestamp] = decoded.split(':');
+
+        const user = users.find(u => u.username === tokenUsername);
+        
+        if (!user || user.status !== 'approved') {
+          return new Response(JSON.stringify({ success: false, message: 'Nevažeći token' }), { status: 401, headers });
+        }
+
+        const tokenAge = Date.now() - parseInt(timestamp);
+        if (tokenAge > 7 * 24 * 60 * 60 * 1000) {
+          return new Response(JSON.stringify({ success: false, message: 'Token je istekao' }), { status: 401, headers });
+        }
+
+        const userIdx = users.findIndex(u => u.username === tokenUsername);
+
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${USERS_SHEET}!I${userIdx + 2}?valueInputOption=RAW`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            values: [[favorites]]
+          })
+        });
+
+        return new Response(JSON.stringify({ success: true, message: 'Omiljene linije sačuvane' }), { status: 200, headers });
       } catch (e) {
         return new Response(JSON.stringify({ success: false, message: 'Nevažeći token' }), { status: 401, headers });
       }
