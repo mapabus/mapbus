@@ -1,9 +1,15 @@
 {
   "name": "bus-tracker",
   "version": "1.0.0",
+  "description": "Real-time bus tracking system",
+  "main": "index.js",
   "scripts": {
-    "build": "echo 'Build complete'",
-    "dev": "vercel dev"
+    "dev": "vercel dev",
+    "build": "echo 'Build complete'"
   },
-  "dependencies": {}
+  "dependencies": {
+  },
+  "engines": {
+    "node": ">=18.x"
+  }
 }
