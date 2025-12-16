@@ -11,19 +11,20 @@ async function verifyPassword(password, hashedPassword) {
 
 import { google } from 'googleapis';
 
-const auth = new google.auth.GoogleAuth({
-  credentials: {
-    client_email: process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
-    private_key: process.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-  },
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-});
-
-const sheets = google.sheets({ version: 'v4', auth });
-const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID;
 const USERS_SHEET = 'Users';
 
 export async function onRequest(context) {
+  const auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: context.env.GOOGLE_SHEETS_CLIENT_EMAIL,
+      private_key: context.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    },
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+
+  const sheets = google.sheets({ version: 'v4', auth });
+  const SPREADSHEET_ID = context.env.GOOGLE_SPREADSHEET_ID;
+
   const req = context.request;
   const url = new URL(req.url);
   const method = req.method;
@@ -360,88 +361,14 @@ export async function onRequest(context) {
         return new Response(JSON.stringify({ 
           success: true, 
           username: tokenUsername,
-          favorites: user.favorites || ''
         }), { status: 200, headers });
       } catch (e) {
         return new Response(JSON.stringify({ success: false, message: 'Nevažeći token' }), { status: 401, headers });
       }
     }
 
-    // ====== ČUVANJE OMILJENIH LINIJA ======
-    if (action === 'saveFavorites') {
-      if (!token) {
-        return new Response(JSON.stringify({ success: false, message: 'Nema tokena' }), { status: 401, headers });
-      }
-
-      try {
-        const decoded = atob(token);
-        const [tokenUsername] = decoded.split(':');
-
-        const user = users.find(u => u.username === tokenUsername);
-        
-        if (!user || user.status !== 'approved') {
-          return new Response(JSON.stringify({ success: false, message: 'Nevažeći token' }), { status: 401, headers });
-        }
-
-        const userIdx = users.findIndex(u => u.username === tokenUsername);
-
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${USERS_SHEET}!I${userIdx + 2}`,
-          valueInputOption: 'RAW',
-          resource: {
-            values: [[favorites || '']]
-          }
-        });
-
-        return new Response(JSON.stringify({ success: true, message: 'Omiljene linije sačuvane' }), { status: 200, headers });
-      } catch (e) {
-        return new Response(JSON.stringify({ success: false, message: 'Nevažeći token' }), { status: 401, headers });
-      }
-    }
-
-    // ====== PROMENA LOZINKE ======
-    if (action === 'changePassword') {
-      if (!token) {
-        return new Response(JSON.stringify({ success: false, message: 'Nema tokena' }), { status: 401, headers });
-      }
-
-      try {
-        const decoded = atob(token);
-        const [tokenUsername] = decoded.split(':');
-
-        const user = users.find(u => u.username === tokenUsername);
-        
-        if (!user || user.status !== 'approved') {
-          return new Response(JSON.stringify({ success: false, message: 'Nevažeći token' }), { status: 401, headers });
-        }
-
-        if (!await verifyPassword(currentPassword, user.passwordHash)) {
-          return new Response(JSON.stringify({ success: false, message: 'Trenutna lozinka nije tačna' }), { status: 400, headers });
-        }
-
-        const newHashedPassword = await hashPassword(newPassword);
-
-        const userIdx = users.findIndex(u => u.username === tokenUsername);
-
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${USERS_SHEET}!B${userIdx + 2}`,
-          valueInputOption: 'RAW',
-          resource: {
-            values: [[newHashedPassword]]
-          }
-        });
-
-        return new Response(JSON.stringify({ success: true, message: 'Lozinka uspešno promenjena' }), { status: 200, headers });
-      } catch (e) {
-        return new Response(JSON.stringify({ success: false, message: 'Greška pri promeni lozinke' }), { status: 500, headers });
-      }
-    }
-
-    return new Response(JSON.stringify({ success: false, message: 'Nepoznata akcija' }), { status: 400, headers });
   } catch (error) {
-    console.error(error);
+    console.error('Error:', error);
     return new Response(JSON.stringify({ success: false, message: error.message }), { status: 500, headers });
   }
 }
