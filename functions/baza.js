@@ -289,7 +289,7 @@ export async function onRequest(context) {
         <div class="header">
             <div>
                 <h1>Baza Vozila</h1>
-                <p>Vozila se beleže od 29.11.2025.</p>
+                <p>Vozila se beleze od 29.11.2025.</p>
             </div>
 
             <div class="stats">
@@ -306,20 +306,20 @@ export async function onRequest(context) {
 
         <div class="controls">
             <div class="search-group">
-                <label for="searchVehicle">Pretraži vozilo:</label>
+                <label for="searchVehicle">Pretrazi vozilo:</label>
                 <input type="text" id="searchVehicle" placeholder="Npr. P70618" oninput="filterTable()">
             </div>
             <div class="search-group">
-                <label for="searchRoute">Pretraži liniju:</label>
+                <label for="searchRoute">Pretrazi liniju:</label>
                 <input type="text" id="searchRoute" placeholder="Npr. 601" oninput="filterTable()">
             </div>
             <div class="search-group">
-                <label for="searchDeparture">Pretraži polazak:</label>
+                <label for="searchDeparture">Pretrazi polazak:</label>
                 <input type="text" id="searchDeparture" placeholder="Npr. 12:31" oninput="filterTable()">
             </div>
             <div class="search-group">
-                <label for="searchDirection">Pretraži smer:</label>
-                <input type="text" id="searchDirection" placeholder="Npr. Surčin" oninput="filterTable()">
+                <label for="searchDirection">Pretrazi smer:</label>
+                <input type="text" id="searchDirection" placeholder="Npr. Surcin" oninput="filterTable()">
             </div>
             <div class="search-group">
                 <label for="sortBy">Sortiraj po:</label>
@@ -344,7 +344,7 @@ export async function onRequest(context) {
                 </thead>
                 <tbody id="tableBody">
                     <tr>
-                        <td colspan="5" class="loading">Učitavam podatke</td>
+                        <td colspan="5" class="loading">Ucitavam podatke</td>
                     </tr>
                 </tbody>
             </table>
@@ -360,7 +360,7 @@ export async function onRequest(context) {
             const refreshIndicator = document.getElementById('refreshIndicator');
             
             if (!silent) {
-                tbody.innerHTML = '<tr><td colspan="5" class="loading">Učitavam podatke</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="loading">Ucitavam podatke</td></tr>';
             } else {
                 refreshIndicator.classList.add('show');
             }
@@ -391,9 +391,9 @@ export async function onRequest(context) {
                     tbody.innerHTML = `<tr><td colspan="5" class="no-data">${data.message || 'Nema podataka'}</td></tr>`;
                 }
             } catch (error) {
-                console.error('Greška:', error);
+                console.error('Greska:', error);
                 if (!silent) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="no-data">Greška pri učitavanju podataka</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="no-data">Greska pri ucitavanju podataka</td></tr>';
                 }
             } finally {
                 setTimeout(() => {
@@ -439,7 +439,7 @@ export async function onRequest(context) {
                 if (diffHours < 1) {
                     timestampStyle = 'color: #28a745; font-weight: bold;'; // Zeleno - aktivno
                 } else if (diffHours < 24) {
-                    timestampStyle = 'color: #ffc107;'; // Žuto - danas
+                    timestampStyle = 'color: #ffc107;'; // zuto - danas
                 } else {
                     timestampStyle = 'color: #999;'; // Sivo - staro
                 }
@@ -472,19 +472,19 @@ export async function onRequest(context) {
                 if (routeSearch) {
                     const linija = vehicle.linija.toLowerCase();
                     
-                    // Ako tražimo samo broj (samo cifre)
+                    // Ako trazimo samo broj (samo cifre)
                     if (/^\d+$/.test(routeSearch)) {
-                        // TAČNO poklapanje - samo linija bez slova
+                        // TAcNO poklapanje - samo linija bez slova
                         routeMatch = linija === routeSearch;
                     } 
-                    // Ako tražimo slovo (npr. "N")
+                    // Ako trazimo slovo (npr. "N")
                     else if (/^[a-z]$/i.test(routeSearch)) {
-                        // Poklapa se ako linija sadrži to slovo
+                        // Poklapa se ako linija sadrzi to slovo
                         routeMatch = linija.includes(routeSearch);
                     }
-                    // Ako tražimo broj sa slovom (npr. "860A")
+                    // Ako trazimo broj sa slovom (npr. "860A")
                     else {
-                        // Tačno poklapanje
+                        // Tacno poklapanje
                         routeMatch = linija === routeSearch;
                     }
                 }
@@ -515,5 +515,6 @@ export async function onRequest(context) {
   });
 
 }
+
 
 
