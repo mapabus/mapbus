@@ -386,7 +386,7 @@ export async function onRequest(context) {
                     renderTable(allData);
                     updateStats(allData);
                     
-                    console.log(`Učitano ${allData.length} vozila iz baze`);
+                    console.log(`Ucitano ${allData.length} vozila iz baze`);
                 } else {
                     tbody.innerHTML = `<tr><td colspan="5" class="no-data">${data.message || 'Nema podataka'}</td></tr>`;
                 }
@@ -515,4 +515,5 @@ export async function onRequest(context) {
   });
 
 }
+
 
