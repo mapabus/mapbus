@@ -11,14 +11,14 @@ export async function onRequest(context) {
   try {
     const auth = new google.auth.GoogleAuth({
       credentials: {
-        client_email: process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_SHEETS_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        client_email: context.env.GOOGLE_SHEETS_CLIENT_EMAIL,
+        private_key: context.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
       },
       scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
     });
 
     const sheets = google.sheets({ version: 'v4', auth });
-    const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
+    const spreadsheetId = context.env.GOOGLE_SPREADSHEET_ID;
 
     const sheetName = 'Baza';
     console.log(`Reading from sheet: ${sheetName}`);
