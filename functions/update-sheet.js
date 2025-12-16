@@ -1,4 +1,41 @@
-import { google } from 'googleapis';
+async function getAccessToken(context) {
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const claim = {
+    iss: context.env.GOOGLE_SHEETS_CLIENT_EMAIL,
+    scope: 'https://www.googleapis.com/auth/spreadsheets',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: Math.floor(Date.now() / 1000) + 3600,
+    iat: Math.floor(Date.now() / 1000)
+  };
+
+  const encode = (obj) => btoa(JSON.stringify(obj)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+
+  const signatureInput = `${encode(header)}.${encode(claim)}`;
+
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    Uint8Array.from(atob(context.env.GOOGLE_SHEETS_PRIVATE_KEY.replace(/\\n/g, '\n').replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----/g, '').trim()), c => c.charCodeAt(0)),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(signatureInput));
+  const jwt = `${signatureInput}.${encode(Array.from(new Uint8Array(signature)))}`;
+
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+  });
+
+  if (!tokenResponse.ok) {
+    throw new Error('Failed to get access token');
+  }
+
+  const { access_token } = await tokenResponse.json();
+  return access_token;
+}
 
 export async function onRequest(context) {
   const req = context.request;
@@ -31,30 +68,8 @@ export async function onRequest(context) {
 
     console.log(`Received ${vehicles.length} vehicles`);
 
-    const clientEmail = context.env.GOOGLE_SHEETS_CLIENT_EMAIL;
-    const privateKey = context.env.GOOGLE_SHEETS_PRIVATE_KEY;
+    const access_token = await getAccessToken(context);
     const spreadsheetId = context.env.GOOGLE_SPREADSHEET_ID;
-
-    if (!clientEmail || !privateKey || !spreadsheetId) {
-      return new Response(JSON.stringify({ 
-        error: 'Missing environment variables'
-      }), { status: 500, headers });
-    }
-
-    let formattedPrivateKey = privateKey;
-    if (privateKey.includes('\\n')) {
-      formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
-    }
-
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: clientEmail,
-        private_key: formattedPrivateKey,
-      },
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
-
-    const sheets = google.sheets({ version: 'v4', auth });
 
     const now = new Date();
     const timestamp = now.toLocaleString('sr-RS', { 
@@ -71,18 +86,20 @@ export async function onRequest(context) {
     console.log(`Target sheet: ${sheetName}`);
 
     let sheetId = null;
-    let spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
-    let existingSheet = spreadsheet.data.sheets.find(
-      s => s.properties.title === sheetName
-    );
+    const spreadsheetResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
+      headers: { Authorization: `Bearer ${access_token}` }
+    });
+    const spreadsheetData = await spreadsheetResponse.json();
+    let existingSheet = spreadsheetData.sheets.find(s => s.properties.title === sheetName);
     
     if (existingSheet) {
       sheetId = existingSheet.properties.sheetId;
       console.log(`Sheet "${sheetName}" already exists (ID: ${sheetId})`);
     } else {
-      const addSheetResponse = await sheets.spreadsheets.batchUpdate({
-        spreadsheetId,
-        resource: {
+      const addSheetResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           requests: [{
             addSheet: {
               properties: {
@@ -95,24 +112,24 @@ export async function onRequest(context) {
               }
             }
           }]
-        }
+        })
       });
-      
-      sheetId = addSheetResponse.data.replies[0].addSheet.properties.sheetId;
+      const addSheetData = await addSheetResponse.json();
+      sheetId = addSheetData.replies[0].addSheet.properties.sheetId;
       console.log(`Created new sheet "${sheetName}" (ID: ${sheetId})`);
       
-      await sheets.spreadsheets.values.update({
-        spreadsheetId,
-        range: `${sheetName}!A1:F1`,
-        valueInputOption: 'RAW',
-        resource: {
+      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A1:F1?valueInputOption=RAW`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           values: [['Vozilo', 'Linija', 'Polazak', 'Smer', 'Vreme upisa', 'Datum']]
-        }
+        })
       });
       
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId,
-        resource: {
+      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           requests: [{
             repeatCell: {
               range: {
@@ -135,20 +152,20 @@ export async function onRequest(context) {
               fields: 'userEnteredFormat(backgroundColor,textFormat)'
             }
           }]
-        }
+        })
       });
     }
 
     let existingData = [];
-    try {
-      const readResponse = await sheets.spreadsheets.values.get({
-        spreadsheetId,
-        range: `${sheetName}!A2:F`,
-      });
-      existingData = readResponse.data.values || [];
+    const readResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A2:F`, {
+      headers: { Authorization: `Bearer ${access_token}` }
+    });
+    if (readResponse.ok) {
+      const readData = await readResponse.json();
+      existingData = readData.values || [];
       console.log(`Found ${existingData.length} existing rows in ${sheetName}`);
-    } catch (readError) {
-      console.log('No existing data:', readError.message);
+    } else {
+      console.log('No existing data');
     }
 
     const existingVehicles = new Map();
@@ -178,97 +195,4 @@ export async function onRequest(context) {
 
       if (existingVehicles.has(vehicleLabel)) {
         const existingRow = existingVehicles.get(vehicleLabel);
-        const arrayIndex = existingRow.rowIndex - 2;
-        finalData[arrayIndex] = rowData;
-        updateCount++;
-      } else {
-        finalData.push(rowData);
-        newCount++;
-        existingVehicles.set(vehicleLabel, { 
-          rowIndex: finalData.length + 1, 
-          data: rowData 
-        });
-      }
-    });
-
-    console.log(`Processing: ${updateCount} updates, ${newCount} new vehicles`);
-
-    const BATCH_SIZE = 500;
-    const batches = [];
-    
-    for (let i = 0; i < finalData.length; i += BATCH_SIZE) {
-      batches.push(finalData.slice(i, i + BATCH_SIZE));
-    }
-
-    console.log(`Writing ${batches.length} batches to Google Sheets`);
-
-    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-      const batch = batches[batchIndex];
-      const startRow = (batchIndex * BATCH_SIZE) + 2;
-      const endRow = startRow + batch.length - 1;
-
-      try {
-        await sheets.spreadsheets.values.update({
-          spreadsheetId,
-          range: `${sheetName}!A${startRow}:F${endRow}`,
-          valueInputOption: 'RAW',
-          resource: {
-            values: batch
-          }
-        });
-        console.log(`Batch ${batchIndex + 1}/${batches.length} written (rows ${startRow}-${endRow})`);
-      } catch (updateError) {
-        console.error(`Failed to write batch ${batchIndex + 1}:`, updateError.message);
-        throw updateError;
-      }
-
-      if (batchIndex < batches.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-    }
-
-    try {
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId,
-        resource: {
-          requests: [{
-            sortRange: {
-              range: {
-                sheetId: sheetId,
-                startRowIndex: 1,
-                startColumnIndex: 0,
-                endColumnIndex: 6,
-              },
-              sortSpecs: [{
-                dimensionIndex: 0,
-                sortOrder: 'ASCENDING',
-              }],
-            },
-          }],
-        },
-      });
-      console.log('Data sorted successfully');
-    } catch (sortError) {
-      console.warn('Sort error (non-critical):', sortError.message);
-    }
-
-    console.log('=== Update Complete ===');
-
-    return new Response(JSON.stringify({ 
-      success: true, 
-      newVehicles: newCount,
-      updatedVehicles: updateCount,
-      totalProcessed: vehicles.length,
-      timestamp,
-      sheetUsed: sheetName,
-      batchesWritten: batches.length
-    }), { status: 200, headers });
-
-  } catch (error) {
-    console.error('Unexpected error:', error);
-    return new Response(JSON.stringify({ 
-      error: 'Unexpected error',
-      details: error.message
-    }), { status: 500, headers });
-  }
-}
+        const arrayIndex = existingRow.row
