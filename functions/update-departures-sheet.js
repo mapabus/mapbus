@@ -1,4 +1,41 @@
-import { google } from 'googleapis';
+async function getAccessToken(context) {
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const claim = {
+    iss: context.env.GOOGLE_SHEETS_CLIENT_EMAIL,
+    scope: 'https://www.googleapis.com/auth/spreadsheets',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: Math.floor(Date.now() / 1000) + 3600,
+    iat: Math.floor(Date.now() / 1000)
+  };
+
+  const encode = (obj) => btoa(JSON.stringify(obj)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+
+  const signatureInput = `${encode(header)}.${encode(claim)}`;
+
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    Uint8Array.from(atob(context.env.GOOGLE_SHEETS_PRIVATE_KEY.replace(/\\n/g, '\n').replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----/g, '').trim()), c => c.charCodeAt(0)),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(signatureInput));
+  const jwt = `${signatureInput}.${encode(Array.from(new Uint8Array(signature)))}`;
+
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+  });
+
+  if (!tokenResponse.ok) {
+    throw new Error('Failed to get access token');
+  }
+
+  const { access_token } = await tokenResponse.json();
+  return access_token;
+}
 
 export async function onRequest(context) {
   const req = context.request;
@@ -21,23 +58,19 @@ export async function onRequest(context) {
     console.log(`=== Reading ${sheetName} Sheet ===`);
     
     try {
-      const auth = new google.auth.GoogleAuth({
-        credentials: {
-          client_email: context.env.GOOGLE_SHEETS_CLIENT_EMAIL,
-          private_key: context.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        },
-        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
-      });
-
-      const sheets = google.sheets({ version: 'v4', auth });
+      const access_token = await getAccessToken(context);
       const spreadsheetId = context.env.GOOGLE_SPREADSHEET_ID;
 
-      const response = await sheets.spreadsheets.values.get({
-        spreadsheetId,
-        range: `${sheetName}!A1:J`,
+      const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A1:J`, {
+        headers: { Authorization: `Bearer ${access_token}` }
       });
 
-      const rows = response.data.values || [];
+      if (!response.ok) {
+        throw new Error('Failed to read sheet');
+      }
+
+      const data = await response.json();
+      const rows = data.values || [];
       const routes = [];
       let currentRoute = null;
       let currentDirection = null;
@@ -96,24 +129,20 @@ export async function onRequest(context) {
   console.log('=== Updating Polasci from Baza Sheet ===');
   
   try {
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: context.env.GOOGLE_SHEETS_CLIENT_EMAIL,
-        private_key: context.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      },
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    });
-
-    const sheets = google.sheets({ version: 'v4', auth });
+    const access_token = await getAccessToken(context);
     const spreadsheetId = context.env.GOOGLE_SPREADSHEET_ID;
 
     console.log('Reading from Baza sheet...');
-    const bazaResponse = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: 'Baza!A2:F',
+    const bazaResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Baza!A2:F`, {
+      headers: { Authorization: `Bearer ${access_token}` }
     });
 
-    const bazaRows = bazaResponse.data.values || [];
+    if (!bazaResponse.ok) {
+      throw new Error('Failed to read Baza sheet');
+    }
+
+    const bazaData = await bazaResponse.json();
+    const bazaRows = bazaData.values || [];
     
     if (bazaRows.length === 0) {
       return new Response(JSON.stringify({
@@ -247,17 +276,19 @@ export async function onRequest(context) {
     const sheetName = 'Polasci';
     let sheetId = null;
     
-    const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
-    const existingSheet = spreadsheet.data.sheets.find(
-      s => s.properties.title === sheetName
-    );
+    const spreadsheetResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
+      headers: { Authorization: `Bearer ${access_token}` }
+    });
+    const spreadsheetData = await spreadsheetResponse.json();
+    const existingSheet = spreadsheetData.sheets.find(s => s.properties.title === sheetName);
     
     if (existingSheet) {
       sheetId = existingSheet.properties.sheetId;
     } else {
-      const addSheetResponse = await sheets.spreadsheets.batchUpdate({
-        spreadsheetId,
-        resource: {
+      const addSheetResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           requests: [{
             addSheet: {
               properties: {
@@ -266,21 +297,22 @@ export async function onRequest(context) {
               }
             }
           }]
-        }
+        })
       });
-      sheetId = addSheetResponse.data.replies[0].addSheet.properties.sheetId;
+      const addSheetData = await addSheetResponse.json();
+      sheetId = addSheetData.replies[0].addSheet.properties.sheetId;
     }
 
     let existingData = [];
     const existingDeparturesMap = new Map();
     const routeStructure = new Map();
     
-    try {
-      const readResponse = await sheets.spreadsheets.values.get({
-        spreadsheetId,
-        range: `${sheetName}!A1:J`,
-      });
-      existingData = readResponse.data.values || [];
+    const readResponse = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A1:J`, {
+      headers: { Authorization: `Bearer ${access_token}` }
+    });
+    if (readResponse.ok) {
+      const readData = await readResponse.json();
+      existingData = readData.values || [];
 
       let currentRoute = null;
       let currentDirection = null;
@@ -322,8 +354,7 @@ export async function onRequest(context) {
       }
       
       console.log(`Mapped ${existingDeparturesMap.size} existing departures`);
-      
-    } catch (readError) {
+    } else {
       console.log('No existing data, starting fresh');
     }
 
@@ -446,25 +477,25 @@ export async function onRequest(context) {
       }
     }
 
-    await sheets.spreadsheets.values.clear({
-      spreadsheetId,
-      range: `${sheetName}!A1:J`
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A1:J:clear`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${access_token}` }
     });
 
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: `${sheetName}!A1`,
-      valueInputOption: 'RAW',
-      resource: {
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A1?valueInputOption=RAW`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         values: allRows
-      }
+      })
     });
 
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId,
-      resource: {
+    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         requests: formatRequests
-      }
+      })
     });
 
     return new Response(JSON.stringify({
