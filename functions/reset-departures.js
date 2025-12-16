@@ -11,9 +11,9 @@ export async function onRequest(context) {
   console.log('=== Departures Sheet Reset Request ===');
   
   try {
-    const clientEmail = process.env.GOOGLE_SHEETS_CLIENT_EMAIL;
-    const privateKey = process.env.GOOGLE_SHEETS_PRIVATE_KEY;
-    const spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID;
+    const clientEmail = context.env.GOOGLE_SHEETS_CLIENT_EMAIL;
+    const privateKey = context.env.GOOGLE_SHEETS_PRIVATE_KEY;
+    const spreadsheetId = context.env.GOOGLE_SPREADSHEET_ID;
 
     if (!clientEmail || !privateKey || !spreadsheetId) {
       return new Response(JSON.stringify({ 
