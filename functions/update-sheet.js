@@ -195,4 +195,92 @@ export async function onRequest(context) {
 
       if (existingVehicles.has(vehicleLabel)) {
         const existingRow = existingVehicles.get(vehicleLabel);
-        const arrayIndex = existingRow.row
+        const arrayIndex = existingRow.rowIndex - 2;
+        finalData[arrayIndex] = rowData;
+        updateCount++;
+      } else {
+        finalData.push(rowData);
+        newCount++;
+        existingVehicles.set(vehicleLabel, { 
+          rowIndex: finalData.length + 1, 
+          data: rowData 
+        });
+      }
+    });
+
+    console.log(`Processing: ${updateCount} updates, ${newCount} new vehicles`);
+
+    const BATCH_SIZE = 500;
+    const batches = [];
+    
+    for (let i = 0; i < finalData.length; i += BATCH_SIZE) {
+      batches.push(finalData.slice(i, i + BATCH_SIZE));
+    }
+
+    console.log(`Writing ${batches.length} batches to Google Sheets`);
+
+    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+      const batch = batches[batchIndex];
+      const startRow = (batchIndex * BATCH_SIZE) + 2;
+      const endRow = startRow + batch.length - 1;
+
+      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A${startRow}:F${endRow}?valueInputOption=RAW`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          values: batch
+        })
+      });
+      console.log(`Batch ${batchIndex + 1}/${batches.length} written (rows ${startRow}-${endRow})`);
+
+      if (batchIndex < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+    }
+
+    try {
+      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requests: [{
+            sortRange: {
+              range: {
+                sheetId: sheetId,
+                startRowIndex: 1,
+                startColumnIndex: 0,
+                endColumnIndex: 6,
+              },
+              sortSpecs: [{
+                dimensionIndex: 0,
+                sortOrder: 'ASCENDING',
+              }],
+            },
+          }],
+        })
+      });
+      console.log('Data sorted successfully');
+    } catch (sortError) {
+      console.warn('Sort error (non-critical):', sortError.message);
+    }
+
+    console.log('=== Update Complete ===');
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      newVehicles: newCount,
+      updatedVehicles: updateCount,
+      totalProcessed: vehicles.length,
+      timestamp,
+      sheetUsed: sheetName,
+      batchesWritten: batches.length
+    }), { status: 200, headers });
+
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    return new Response(JSON.stringify({ 
+      error: 'Unexpected error',
+      details: error.message
+    }), { status: 500, headers });
+  }
+}
