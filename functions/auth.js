@@ -9,22 +9,48 @@ async function verifyPassword(password, hashedPassword) {
   return await hashPassword(password) === hashedPassword;
 }
 
-import { google } from 'googleapis';
+async function getAccessToken(context) {
+  const header = { alg: 'RS256', typ: 'JWT' };
+  const claim = {
+    iss: context.env.GOOGLE_SHEETS_CLIENT_EMAIL,
+    scope: 'https://www.googleapis.com/auth/spreadsheets',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: Math.floor(Date.now() / 1000) + 3600,
+    iat: Math.floor(Date.now() / 1000)
+  };
+
+  const encode = (obj) => btoa(JSON.stringify(obj)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+
+  const signatureInput = `${encode(header)}.${encode(claim)}`;
+
+  const key = await crypto.subtle.importKey(
+    'pkcs8',
+    Uint8Array.from(atob(context.env.GOOGLE_SHEETS_PRIVATE_KEY.replace(/\\n/g, '\n').replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----/g, '').trim()), c => c.charCodeAt(0)),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(signatureInput));
+  const jwt = `${signatureInput}.${encode(Array.from(new Uint8Array(signature)))}`;
+
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+  });
+
+  if (!tokenResponse.ok) {
+    throw new Error('Failed to get access token');
+  }
+
+  const { access_token } = await tokenResponse.json();
+  return access_token;
+}
 
 const USERS_SHEET = 'Users';
 
 export async function onRequest(context) {
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: context.env.GOOGLE_SHEETS_CLIENT_EMAIL,
-      private_key: context.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    },
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-  });
-
-  const sheets = google.sheets({ version: 'v4', auth });
-  const SPREADSHEET_ID = context.env.GOOGLE_SPREADSHEET_ID;
-
   const req = context.request;
   const url = new URL(req.url);
   const method = req.method;
@@ -61,24 +87,57 @@ export async function onRequest(context) {
   const { action, username, password, token, userIndex, status, captcha, currentPassword, newPassword, favorites } = body;
 
   try {
+    const access_token = await getAccessToken(context);
+    const SPREADSHEET_ID = context.env.GOOGLE_SPREADSHEET_ID;
+
     let users = [];
     
-    try {
-      const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${USERS_SHEET}!A:I`,
-      });
+    let response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${USERS_SHEET}!A:I`, {
+      headers: { Authorization: `Bearer ${access_token}` }
+    });
 
-      const rows = response.data.values || [];
-      
-      if (rows.length === 0) {
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${USERS_SHEET}!A1:I1`,
-          valueInputOption: 'RAW',
-          resource: {
+    if (!response.ok) {
+      const errorData = await response.json();
+      if (errorData.error.message.includes('Unable to parse range')) {
+        console.log('Creating Users sheet...');
+        
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}:batchUpdate`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requests: [{
+              addSheet: {
+                properties: {
+                  title: USERS_SHEET
+                }
+              }
+            }]
+          })
+        });
+        
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${USERS_SHEET}!A1:I1?valueInputOption=RAW`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             values: [['Username', 'PasswordHash', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory', 'IsAdmin', 'LastAccess', 'Favorites']]
-          }
+          })
+        });
+        
+        console.log('Users sheet created successfully');
+      } else {
+        throw new Error(errorData.error.message);
+      }
+    } else {
+      const data = await response.json();
+      const rows = data.values || [];
+
+      if (rows.length === 0) {
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${USERS_SHEET}!A1:I1?valueInputOption=RAW`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            values: [['Username', 'PasswordHash', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory', 'IsAdmin', 'LastAccess', 'Favorites']]
+          })
         });
       } else {
         users = rows.slice(1).map(row => ({
@@ -92,36 +151,6 @@ export async function onRequest(context) {
           lastAccess: row[7] || '',
           favorites: row[8] || '',
         }));
-      }
-    } catch (error) {
-      if (error.message && error.message.includes('Unable to parse range')) {
-        console.log('Creating Users sheet...');
-        
-        await sheets.spreadsheets.batchUpdate({
-          spreadsheetId: SPREADSHEET_ID,
-          resource: {
-            requests: [{
-              addSheet: {
-                properties: {
-                  title: USERS_SHEET
-                }
-              }
-            }]
-          }
-        });
-        
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${USERS_SHEET}!A1:I1`,
-          valueInputOption: 'RAW',
-          resource: {
-            values: [['Username', 'PasswordHash', 'Status', 'RegisteredAt', 'LastIP', 'IPHistory', 'IsAdmin', 'LastAccess', 'Favorites']]
-          }
-        });
-        
-        console.log('Users sheet created successfully');
-      } else {
-        throw error;
       }
     }
 
@@ -150,13 +179,12 @@ export async function onRequest(context) {
       const now = new Date().toLocaleString('sr-RS', { timeZone: 'Europe/Belgrade' });
       const hashedPassword = await hashPassword(password);
 
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${USERS_SHEET}!A:I`,
-        valueInputOption: 'RAW',
-        resource: {
+      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${USERS_SHEET}!A:I:append?valueInputOption=RAW`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           values: [[username, hashedPassword, 'pending', now, ip, ip, 'false', '', '']]
-        }
+        })
       });
 
       return new Response(JSON.stringify({ 
@@ -206,13 +234,12 @@ export async function onRequest(context) {
 
       const passwordToStore = needsMigration ? await hashPassword(password) : user.passwordHash;
 
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${USERS_SHEET}!B${userIdx + 2}:I${userIdx + 2}`,
-        valueInputOption: 'RAW',
-        resource: {
-          values: [[passwordToStore, user.status, user.registeredAt, ip, ipHistory, user.isAdmin ?  'true' : 'false', now, user.favorites || '']]
-        }
+      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${USERS_SHEET}!B${userIdx + 2}:I${userIdx + 2}?valueInputOption=RAW`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          values: [[passwordToStore, user.status, user.registeredAt, ip, ipHistory, user.isAdmin ? 'true' : 'false', now, user.favorites || '']]
+        })
       });
 
       if (needsMigration) {
@@ -242,7 +269,7 @@ export async function onRequest(context) {
 
         const user = users.find(u => u.username === tokenUsername);
         
-        if (! user || user.status !== 'approved') {
+        if (!user || user.status !== 'approved') {
           return new Response(JSON.stringify({ success: false, message: 'Nevažeći token' }), { status: 401, headers });
         }
 
@@ -254,13 +281,12 @@ export async function onRequest(context) {
         const userIdx = users.findIndex(u => u.username === tokenUsername);
         const now = new Date().toLocaleString('sr-RS', { timeZone: 'Europe/Belgrade' });
 
-        await sheets.spreadsheets.values.update({
-          spreadsheetId: SPREADSHEET_ID,
-          range: `${USERS_SHEET}!H${userIdx + 2}`,
-          valueInputOption: 'RAW',
-          resource: {
+        await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${USERS_SHEET}!H${userIdx + 2}?valueInputOption=RAW`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             values: [[now]]
-          }
+          })
         });
 
         return new Response(JSON.stringify({ success: true, username: tokenUsername, isAdmin: user.isAdmin }), { status: 200, headers });
@@ -271,7 +297,7 @@ export async function onRequest(context) {
 
     // ====== LISTA KORISNIKA (za admin) ======
     if (action === 'listUsers') {
-      if (! token) {
+      if (!token) {
         return new Response(JSON.stringify({ success: false, message: 'Neautorizovan pristup' }), { status: 401, headers });
       }
 
@@ -280,7 +306,7 @@ export async function onRequest(context) {
         const [tokenUsername] = decoded.split(':');
         const requestUser = users.find(u => u.username === tokenUsername);
         
-        if (! requestUser || ! requestUser.isAdmin) {
+        if (!requestUser || !requestUser.isAdmin) {
           return new Response(JSON.stringify({ success: false, message: 'Nemate admin privilegije' }), { status: 403, headers });
         }
       } catch (e) {
@@ -311,27 +337,23 @@ export async function onRequest(context) {
         const [tokenUsername] = decoded.split(':');
         const requestUser = users.find(u => u.username === tokenUsername);
         
-        if (!requestUser || ! requestUser.isAdmin) {
+        if (!requestUser || !requestUser.isAdmin) {
           return new Response(JSON.stringify({ success: false, message: 'Nemate admin privilegije' }), { status: 403, headers });
         }
       } catch (e) {
         return new Response(JSON.stringify({ success: false, message: 'Nevažeći token' }), { status: 401, headers });
       }
 
-      if (! userIndex || !status) {
-        return new Response(JSON.stringify({ 
-          success: false, 
-          message: 'Nedostaju parametri' 
-        }), { status: 400, headers });
+      if (!userIndex || !status) {
+        return new Response(JSON.stringify({ success: false, message: 'Nedostaju parametri' }), { status: 400, headers });
       }
 
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: SPREADSHEET_ID,
-        range: `${USERS_SHEET}!C${userIndex}`,
-        valueInputOption: 'RAW',
-        resource: {
+      await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${USERS_SHEET}!C${userIndex}?valueInputOption=RAW`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           values: [[status]]
-        }
+        })
       });
 
       return new Response(JSON.stringify({ success: true, message: 'Status ažuriran' }), { status: 200, headers });
